@@ -1,10 +1,11 @@
 import re
 import urllib2
-import sys
+import os
 import bs4
 import codecs
 import warnings
 
+DATA_DIR = './data'
 
 def get_children(href):
 
@@ -263,4 +264,7 @@ def traverse(href):
                     print_dict(child_detail)
             return child
 
-traverse('/v/')
+if __name__ == '__main__':
+    if not os.path.isdir(DATA_DIR):
+        os.mkdir(DATA_DIR)
+    traverse('/v/')
