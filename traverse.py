@@ -4,8 +4,12 @@ import os
 import bs4
 import codecs
 import warnings
+import time
+import json
+import sys
 
-DATA_DIR = './data'
+DATA_DUMP = './data/routes.txt'
+TRAVERSE_MAX_ROUTES = 500
 
 def get_children(href):
 
@@ -115,6 +119,19 @@ def get_protect_rate(grade_table):
     
     return protect_rate
 
+
+def get_area_hierarchy(soup):
+
+   navboxdiv = soup.find(id="navBox").div
+   href_list = navboxdiv.find_all('a')
+
+   parent = []
+   for h in href_list:
+       p = h.get('href')
+       p = p.encode('utf-8', errors = 'ignore')
+       parent.append(p)
+
+   return parent
 
 def get_description(soup):
 
@@ -226,13 +243,16 @@ def get_route_info(href):
         star_rating = get_star_rating(soup)
         detail = get_description(soup)
         grade = get_grade(soup)
+        area_hierarchy = get_area_hierarchy(soup)
         
         route_info = {}
+        route_info['href'] = href
         route_info.update(route_name)
         route_info.update(box_data)        
         route_info.update(star_rating)
         route_info.update(detail)
         route_info.update(grade)
+        route_info['area_hierarchy'] = area_hierarchy
         
         return route_info
 
@@ -246,25 +266,42 @@ def print_dict(child_detail):
         fd.close()
 
 
-def traverse(href):
-    print href
+def traverse_routes(href, routes, max_routes=TRAVERSE_MAX_ROUTES):
     children = get_children(href)
+    print 'Routes traversed=%d' % len(routes)
     for child in children:
         if get_children(child) != None:
-
             # recursively deeper into the rabbit hole
-            traverse(child)
+            traverse_routes(child, routes)
+            time.sleep(0.01)
+            if len(routes) > max_routes:
+                return routes
         else:
             for child in children:
-
                 # print data from route
-                child_detail = get_route_info(child)
-                if child_detail != None:
-                    print child_detail['Name']
-                    print_dict(child_detail)
-            return child
+                routes.append(child)
+                if len(routes) > max_routes:
+                    return routes
+    return routes
 
 if __name__ == '__main__':
-    if not os.path.isdir(DATA_DIR):
-        os.mkdir(DATA_DIR)
-    traverse('/v/')
+
+    print 'Traversing MountainProject for routes'
+    routes = traverse_routes('/v/', [])
+
+    # handle this how you want later -- maybe you just want to keep track of routes you've already crawled and
+    # otherwise append to this file
+    if os.path.exists(DATA_DUMP):
+        print 'Data file exists, exiting'
+        sys.exit(0)
+    else:
+        if not os.path.isdir(os.path.dirname(DATA_DUMP)):
+            os.makedirs(os.path.dirname(DATA_DUMP))
+
+    print 'Getting data for %d routes' % len(routes)
+    for route in routes:
+        print 'Dumping data for route %s' % route
+        route_info = get_route_info(route)
+        with open(DATA_DUMP, 'a') as f:
+            f.write(json.dumps(route_info)+'\n')
+
