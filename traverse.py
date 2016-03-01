@@ -3,12 +3,12 @@ import urllib2
 import os
 import bs4
 import codecs
-import warnings
 import time
 import json
 import sys
 
-DATA_DUMP = './data/routes.txt'
+DATA_DUMP = './data/info.txt'
+ROUTE_HREF = './data/routes.txt'
 TRAVERSE_MAX_ROUTES = 500
 
 def get_children(href):
@@ -49,8 +49,6 @@ def get_children(href):
                 children = get_child_href(dest_iter)
 
                 return children
-            else:
-                warnings.warn("NEITHER ROUTE NOR AREA " + href)
 
 
 def get_child_href(dest_iter):
@@ -266,42 +264,47 @@ def print_dict(child_detail):
         fd.close()
 
 
-def traverse_routes(href, routes, max_routes=TRAVERSE_MAX_ROUTES):
+def traverse_routes(href, max_routes=TRAVERSE_MAX_ROUTES):
     children = get_children(href)
-    print 'Routes traversed=%d' % len(routes)
+
     for child in children:
         if get_children(child) != None:
             # recursively deeper into the rabbit hole
-            traverse_routes(child, routes)
             time.sleep(0.01)
-            if len(routes) > max_routes:
-                return routes
+            traverse_routes(child)
         else:
-            for child in children:
-                # print data from route
-                routes.append(child)
-                if len(routes) > max_routes:
-                    return routes
-    return routes
+            with open(ROUTE_HREF, 'a') as f:
+                f.write(child+'\n')
+                print child
+
+    return children
+
 
 if __name__ == '__main__':
 
     print 'Traversing MountainProject for routes'
-    routes = traverse_routes('/v/', [])
+    root = '/v/'
 
-    # handle this how you want later -- maybe you just want to keep track of routes you've already crawled and
-    # otherwise append to this file
-    if os.path.exists(DATA_DUMP):
-        print 'Data file exists, exiting'
+    # keep track of routes already crawled
+    if os.path.exists(ROUTE_HREF):
+        print 'Route file exists, exiting'
         sys.exit(0)
     else:
-        if not os.path.isdir(os.path.dirname(DATA_DUMP)):
-            os.makedirs(os.path.dirname(DATA_DUMP))
+        if not os.path.isdir(os.path.dirname(ROUTE_HREF)):
+            os.makedirs(os.path.dirname(ROUTE_HREF))
 
-    print 'Getting data for %d routes' % len(routes)
-    for route in routes:
-        print 'Dumping data for route %s' % route
-        route_info = get_route_info(route)
-        with open(DATA_DUMP, 'a') as f:
-            f.write(json.dumps(route_info)+'\n')
+    traverse_routes(root)
 
+
+#    with open(ROUTE_HREF) as f:
+#        routes = f.readlines()
+#        # routes.rstrip()
+
+#    # routes = read table
+#    print 'Getting data for %d routes' % len(routes)
+#    for route in routes:
+#        print 'Dumping data for route %s' % route
+#        route_info = get_route_info(route)
+#        with open(DATA_DUMP, 'a') as f:
+#            f.write(json.dumps(route_info)+'\n')
+#
