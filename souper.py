@@ -40,7 +40,10 @@ def get_box_data(soup):
     return box_data
 
 
-def get_protect_rate(grade_table):
+def get_protect_rate(soup):
+
+    # up there with with route name
+    grade_table = soup.h3
     
     # finds ratings like PG13, R, X
     # destroys the grade spans and looks for text
@@ -106,15 +109,16 @@ def get_star_rating(soup):
     
     star_rating = {}
     
-    meta = soup.find(id="starSummaryText").find_all('meta')
-    for m in meta:
-        head = m['itemprop']
-        head = head.encode('utf-8', errors = 'ignore')
-        body = m['content']
-        body = body.encode('utf-8', errors = 'ignore')
-        star_rating['star' + head] = body
-        
-    return star_rating
+    if soup.find(id="starSummaryText") != None:
+        meta = soup.find(id="starSummaryText").find_all('meta')
+        for m in meta:
+            head = m['itemprop']
+            head = head.encode('utf-8', errors = 'ignore')
+            body = m['content']
+            body = body.encode('utf-8', errors = 'ignore')
+            star_rating['star' + head] = body
+            
+        return star_rating
 
 
 def get_grade(soup):
@@ -122,6 +126,7 @@ def get_grade(soup):
     # up there with with route name
     grade_table = soup.h3
 
+    # look for grades in spans
     grade = []
 
     for s in grade_table.find_all('span'):
@@ -137,21 +142,11 @@ def get_grade(soup):
 
             grade.append(body)
 
-    # get protection aka scary rating
-    if grade_table != None:
-        while grade_table.span != None:
-            grade_table.span.decompose()
-        protect_rate = grade_table.getText()
-        protect_rate = protect_rate.encode('utf8', errors = 'ignore').strip()
-    else:
-        protect_rate = ''
-
     # format grade adding protection rating
-    grade = [(s + " " + protect_rate).strip() for s in grade]
-
-    grade_data = {}
+    # grade = [(s + " " + protect_rate).strip() for s in grade]
     
     # extract tbe grades
+    grade_data = {}
     for g in grade:
         h = g.split(':\xc2\xa0')
         if len(h) > 1:
@@ -160,30 +155,26 @@ def get_grade(soup):
     return grade_data
 
 
-def get_route_info(href):
-    
-    try:
-        mp_page = urllib2.urlopen('http://www.mountainproject.com' + href)
-    except:
-        return None
-    else:
-        mp_html = mp_page.read()
-        soup = bs4.BeautifulSoup(mp_html, 'html.parser')
+def get_route_info(soup):
         
-        route_name = get_route_name(soup)
-        box_data = get_box_data(soup)
-        star_rating = get_star_rating(soup)
-        detail = get_description(soup)
-        grade = get_grade(soup)
-        area_hierarchy = get_area_hierarchy(soup)
+    route_name = get_route_name(soup)
+    box_data = get_box_data(soup)        
+    detail = get_description(soup)
+    grade = get_grade(soup)
+    protect_rate = get_protect_rate(soup)
+    area_hierarchy = get_area_hierarchy(soup)
+
+    route_info = {}
+    route_info.update(route_name)
+    route_info.update(box_data)        
+    route_info.update(detail)
+    route_info.update(grade)
+    route_info['protect_rate'] = protect_rate
+    route_info['area_hierarchy'] = area_hierarchy
+
+#        is_area = re.search('You & This Area',youContainer.get_text()) != None
+#        if not is_area:
+#            star_rating = get_star_rating(soup)
+#            route_info.update(star_rating)
         
-        route_info = {}
-        route_info['href'] = href
-        route_info.update(route_name)
-        route_info.update(box_data)        
-        route_info.update(star_rating)
-        route_info.update(detail)
-        route_info.update(grade)
-        route_info['area_hierarchy'] = area_hierarchy
-        
-        return route_info
+    return route_info
