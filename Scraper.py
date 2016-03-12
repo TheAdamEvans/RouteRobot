@@ -2,6 +2,7 @@ import re
 from urllib2 import urlopen
 from bs4 import BeautifulSoup
 import souper as sr
+from Destination import Destination
 
 class Scraper(object):
     """
@@ -20,7 +21,7 @@ class Scraper(object):
             return None
         else:
             mp_html = mp_page.read()
-            self.soup = BeautifulSoup(mp_html) # , 'html.parser')
+            self.soup = BeautifulSoup(mp_html, 'html.parser')
 
     def get_child_href(self, dest_iter):
     
@@ -84,6 +85,10 @@ class Scraper(object):
         if dest.is_route:
             dest.grade = sr.get_grade(self.soup)
             dest.protect_rate = sr.get_protect_rate(self.soup)
-            dest.star_rating = sr.get_star_rating(self.soup)
+
+            # includes star average, number of votes
+            star_rating = sr.get_star_rating(self.soup)
+            dest.update_feature(star_rating)
 
         return dest
+
