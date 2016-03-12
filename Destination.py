@@ -4,11 +4,11 @@ class Destination(object):
         self.href = href
 
         # initialize self with dictionary of features
-        for n, feat in feature.items():
-            setattr(self, n, feat)
+        for k, v in feature.items():
+            setattr(self, k, v)
 
-    def update_feature():
+    def update_feature(self, feature):
 
         # update self new dictionary
-        for n, feat in feature.items():
-            setattr(self, n, feat)
+        for k, v in feature.items():
+            setattr(self, k, v)
