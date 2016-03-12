@@ -172,6 +172,8 @@ def get_route_info(soup):
     route_info['protect_rate'] = protect_rate
     route_info['area_hierarchy'] = area_hierarchy
 
+    route_info = dict((k.lower(), v) for k,v in route_info.iteritems())
+
 #        is_area = re.search('You & This Area',youContainer.get_text()) != None
 #        if not is_area:
 #            star_rating = get_star_rating(soup)
