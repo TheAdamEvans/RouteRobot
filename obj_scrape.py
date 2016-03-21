@@ -34,13 +34,11 @@ if __name__ == '__main__':
 
     root_href = '/v/'
     #root_href = '/v/the-nut-tree-boulders/105734016'
-    
-    scrap = Scraper(root_href)
-    root_dest = scrap.create_destination()
-    root_dest.children_href = scrap.get_children()
 
+    scrap = Scraper(root_href)
+    
     # iterate through areas immediately below
-    for state_href in root_dest.children_href:
+    for state_href in scrap.get_children():
 
         # initialize root destination with children
         scrap = Scraper(state_href)
