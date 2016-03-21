@@ -85,10 +85,6 @@ class Scraper(object):
         if dest.is_route:
             dest.grade = sr.get_grade(self.soup)
             dest.protect_rate = sr.get_protect_rate(self.soup)
-
-            # includes star average, number of votes
-            star_rating = sr.get_star_rating(self.soup)
-            dest.update_feature(star_rating)
+            dest.star_rating = sr.get_star_rating(self.soup)
 
         return dest
-

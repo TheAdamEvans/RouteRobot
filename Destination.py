@@ -1,14 +1,21 @@
+import re
+
 class Destination(object):
 
     def __init__(self, href, feature):
         self.href = href
 
-        # initialize self with dictionary of features
-        for k, v in feature.items():
-            setattr(self, k, v)
+        # informal name for this destination
+        pattern = re.compile('[\W_]+')
+        word_only = pattern.sub('', href)
+        self.nickname = word_only[1:-9]
 
-    def update_feature(self, feature):
+        # initialize self with dictionary of features
+        for n, feat in feature.items():
+            setattr(self, n, feat)
+
+    def update_feature():
 
         # update self new dictionary
-        for k, v in feature.items():
-            setattr(self, k, v)
+        for n, feat in feature.items():
+            setattr(self, n, feat)
