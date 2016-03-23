@@ -72,19 +72,26 @@ class Scraper(object):
 
     def create_destination(self):
 
-        # grab features from html
-        feature = sr.get_route_info(self.soup)
-        dest = Destination(self.href, feature)
-
         # what type of destination is this?
         youContainer = self.soup.find(id="youContainer")
-        dest.is_area = re.search('You & This Area',youContainer.get_text()) != None
-        dest.is_route = re.search('You & This Route',youContainer.get_text()) != None
+        is_area = re.search('You & This Area',youContainer.get_text()) != None
+        is_route = re.search('You & This Route',youContainer.get_text()) != None
 
-        # more scraping is necessary for routes
-        if dest.is_route:
-            dest.grade = sr.get_grade(self.soup)
-            dest.protect_rate = sr.get_protect_rate(self.soup)
-            dest.star_rating = sr.get_star_rating(self.soup)
+        if not is_area and not is_route:
+            # this is the root
+            # not a place you can visit
+            dest = None
+        else:
+            # grab features from html
+            feature = sr.get_general(self.soup)
+            dest = Destination(self.href, feature)
+            dest.is_area = is_area
+            dest.is_route = is_route
+
+            # more scraping is necessary for routes
+            if dest.is_route:
+                dest.grade = sr.get_grade(self.soup)
+                dest.protect_rate = sr.get_protect_rate(self.soup)
+                dest.star_rating = sr.get_star_rating(self.soup)
 
         return dest

@@ -32,8 +32,8 @@ def traverse(node):
 
 if __name__ == '__main__':
 
-    root_href = '/v/'
-    #root_href = '/v/the-nut-tree-boulders/105734016'
+    # root_href = '/v/'
+    root_href = '/v/the-nut-tree-boulders/105734016'
 
     scrap = Scraper(root_href)
     
@@ -63,10 +63,12 @@ if __name__ == '__main__':
             with open(BIG_JSON, 'w+') as dump:
                 flat = json.dumps(all_dest, default=lambda o: o.__dict__)
                 dump.write(flat)
-            print "Printed " + BIG_JSON
 
             # save destination object as pickle
             BIG_PICKLE = './data/' + dest.nickname + '.pickle'
             with open(BIG_PICKLE, 'wb') as handle:
                 pickle.dump(all_dest, handle)
+
+            flourish = "<--------"
+            print flourish + dest.nickname + flourish[::-1]
 
