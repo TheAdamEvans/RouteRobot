@@ -65,10 +65,8 @@ def get_protect_rate(soup):
     protect_rate = grade_table.getText()
     protect_rate = protect_rate.encode('utf8', errors = 'ignore').strip()
     
-    if protect_rate == "":
-        protect_rate = None
-
-    return protect_rate
+    if protect_rate != "":
+        return { 'protect_rate': protect_rate }
 
 
 def get_area_hierarchy(soup):

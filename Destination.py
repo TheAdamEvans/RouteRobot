@@ -15,7 +15,6 @@ class Destination(object):
             setattr(self, n, feat)
 
     def update_feature(self, feature):
-
-        # update self new dictionary
-        for n, feat in feature.items():
-            setattr(self, n, feat)
+        if feature:
+            for n, feat in feature.items():
+                setattr(self, n, feat)

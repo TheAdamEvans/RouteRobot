@@ -90,9 +90,9 @@ class Scraper(object):
 
             # more scraping is necessary for routes
             if dest.is_route:
-                dest.grade = sr.get_grade(self.soup)
-                dest.protect_rate = sr.get_protect_rate(self.soup)
-                dest.star_rating = sr.get_star_rating(self.soup)
+                dest.update_feature(sr.get_grade(self.soup))
+                dest.update_feature(sr.get_protect_rate(self.soup))
+                dest.update_feature(sr.get_star_rating(self.soup))
                 dest.update_feature(sr.get_type(feature['type']))
 
         return dest
