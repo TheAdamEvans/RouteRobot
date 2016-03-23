@@ -4,6 +4,9 @@ import bs4
 import codecs
 
 GPSre = re.compile('(\-?\d+(\.\d+)?),\s*(\-?\d+(\.\d+)?)')
+pitchRE = re.compile(r'^(\d)+ pitch')
+feetRE = re.compile(r'^(\d)+\'')
+commitmentRE = re.compile(r'Grade [VI]+')
 
 def get_box_data(soup):
 
@@ -166,8 +169,27 @@ def get_grade(soup):
     return grade_data
 
 
+def get_type(cmb_type):
+
+    kind_pitches_feet = str(cmb_type).split(', ')
+
+    kind = {}
+    for morsel in kind_pitches_feet:
+        terminology = ['Boulder','Trad','Sport','TR','Aid','Ice','Mixed','Alpine','Chipped']
+        if morsel in terminology:
+            kind[morsel.lower()] = True
+        elif pitchRE.search(morsel):
+            kind['pitches'] = morsel.split(' ')[0]
+        elif feetRE.search(morsel):
+            kind['feet'] = float(morsel[:-1])
+        elif commitmentRE.search(morsel):
+            kind['commitment'] = morsel.split(' ')[-1]
+    return kind
+
+
 def get_general(soup):
-        
+    
+    # call soup helper functions
     general_info = {}
     general_info.update(get_route_name(soup))
     general_info.update(get_box_data(soup))

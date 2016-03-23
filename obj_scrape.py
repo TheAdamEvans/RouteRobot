@@ -3,6 +3,12 @@ from Scraper import Scraper
 import json
 import pickle
 
+
+ROOT_HREF = '/v/the-nut-tree-boulders/105734016'
+#ROOT_HREF = '/v/utah/105708957'
+
+DATA_DIR = './test_data/'
+
 def traverse(node):
 
     children = []
@@ -32,10 +38,7 @@ def traverse(node):
 
 if __name__ == '__main__':
 
-    # root_href = '/v/'
-    root_href = '/v/the-nut-tree-boulders/105734016'
-
-    scrap = Scraper(root_href)
+    scrap = Scraper(ROOT_HREF)
     
     # iterate through areas immediately below
     for state_href in scrap.get_children():
@@ -46,7 +49,7 @@ if __name__ == '__main__':
         dest.children_href = scrap.get_children()
 
         # check if we have already crawled this area
-        OBJECT_OUTFILE = './data/' + dest.nickname + '.pickle'
+        OBJECT_OUTFILE = DATA_DIR + dest.nickname + '.pickle'
         if os.path.exists(OBJECT_OUTFILE):
             print dest.nickname + ' has already ben crawled'
             pass
@@ -59,13 +62,13 @@ if __name__ == '__main__':
             # returns destination object
 
             # write out to file.. for viz??
-            BIG_JSON = './data/' + dest.nickname + '.json'
+            BIG_JSON = DATA_DIR + dest.nickname + '.json'
             with open(BIG_JSON, 'w+') as dump:
                 flat = json.dumps(all_dest, default=lambda o: o.__dict__)
                 dump.write(flat)
 
             # save destination object as pickle
-            BIG_PICKLE = './data/' + dest.nickname + '.pickle'
+            BIG_PICKLE = DATA_DIR + dest.nickname + '.pickle'
             with open(BIG_PICKLE, 'wb') as handle:
                 pickle.dump(all_dest, handle)
 
