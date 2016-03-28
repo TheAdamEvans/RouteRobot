@@ -1,7 +1,6 @@
 import urllib2
 import re
-import bs4
-import codecs
+from bs4 import NavigableString
 
 GPSre = re.compile(r'(\-?\d+(\.\d+)?),\s*(\-?\d+(\.\d+)?)')
 pitchRE = re.compile(r'^(\d)+ pitch')
@@ -52,7 +51,6 @@ def get_box_data(soup):
 
     return box_data
 
-
 def get_protect_rate(soup):
 
     # up there with with route name
@@ -68,7 +66,6 @@ def get_protect_rate(soup):
     if protect_rate != "":
         return { 'protect_rate': protect_rate }
 
-
 def get_area_hierarchy(soup):
 
    navboxdiv = soup.find(id="navBox").div
@@ -83,22 +80,38 @@ def get_area_hierarchy(soup):
    return { 'area_hierarchy': parent }
 
 def get_description(soup):
-    # TODO test /v/astrolizard/109680280
 
-    detail = []
+    standard_head = ['Description', 'Getting There', 'Protection', 'Location']
+
+    # grab all h3 orange header sections on the page
+    detail = {}
+    other_text = []
     for h3 in soup.find_all('h3', { 'class': "dkorange" }):
-
+        
         # text is the element after the h3
         body = h3.next_sibling
+        
+        if isinstance(body, NavigableString):
+            # ignore sections from here on like 'Climbing Season' and such
+            break
+        else:
+            # these are the valuable text sections
+            body = body.get_text()
+            body = body.encode('utf-8', errors = 'ignore')
 
-        # save text
-        detail_str = body.encode('utf-8', errors = 'ignore')
-        detail.append(detail_str[18:-22])
+            head = h3.get_text().encode('utf-8', errors = 'ignore')
+            head = head.strip('\xc2\xa0')
 
-    combined_txt = '\n'.join(detail)
+            if head in standard_head:
+                head = head.replace(' ','_').lower()
+                detail[head] = body
+            else:
+                other_text.append(body)
 
-    return { 'detail': combined_txt }
+    if len(other_text) > 0:
+        detail['other_text'] = '\n'.join(other_text)
 
+    return detail
 
 def get_route_name(soup):
 
@@ -107,7 +120,6 @@ def get_route_name(soup):
     route_name = route_name.strip('\xc2\xa0 ')
 
     return { 'name': route_name }
-
 
 def get_star_rating(soup):
     
@@ -123,7 +135,6 @@ def get_star_rating(soup):
             star_rating['star' + head] = body
             
         return star_rating
-
 
 def get_grade(soup):
 
@@ -156,7 +167,6 @@ def get_grade(soup):
 
     return grade_data
 
-
 def get_type(cmb_type):
 
     kind_pitches_feet = str(cmb_type).split(', ')
@@ -173,7 +183,6 @@ def get_type(cmb_type):
         elif commitmentRE.search(morsel):
             kind['commitment'] = morsel.split(' ')[-1]
     return kind
-
 
 def get_general(soup):
     

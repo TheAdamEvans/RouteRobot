@@ -3,8 +3,8 @@ from Scraper import Scraper
 import json
 import pickle
 
-ROOT_HREF = '/v/sand-rock/105905184'
-DATA_DIR = './data/'
+ROOT_HREF = '/v/kolob-canyon/105717086'
+DATA_DIR = './test_data/'
 
 def traverse(node):
 
@@ -48,7 +48,7 @@ if __name__ == '__main__':
         # check if we have already crawled this area
         OBJECT_OUTFILE = DATA_DIR + dest.nickname + '.pickle'
         if os.path.exists(OBJECT_OUTFILE):
-            print dest.nickname + ' has already ben crawled'
+            print dest.nickname + ' has already been crawled'
             pass
         else:
             if not os.path.isdir(os.path.dirname(OBJECT_OUTFILE)):

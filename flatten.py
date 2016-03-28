@@ -3,8 +3,7 @@ import pandas as pd
 import numpy as np
 import os
 
-DATA_DIR = './data/'
-
+DATA_DIR = './test_data/'
 
 def grab_children(dest, collect):
     if hasattr(dest, 'children'):
@@ -40,8 +39,7 @@ def combine_pickle(DATA_DIR):
 #     print "One or more records WAS NEITHER ROUTE NOR AREA"
 
 climb = combine_pickle(DATA_DIR)
-print climb.shape
-print climb['detail'][0]
+print climb.iloc[0]
 
 
 
