@@ -3,7 +3,7 @@ import re
 import bs4
 import codecs
 
-GPSre = re.compile('(\-?\d+(\.\d+)?),\s*(\-?\d+(\.\d+)?)')
+GPSre = re.compile(r'(\-?\d+(\.\d+)?),\s*(\-?\d+(\.\d+)?)')
 pitchRE = re.compile(r'^(\d)+ pitch')
 feetRE = re.compile(r'^(\d)+\'')
 commitmentRE = re.compile(r'Grade [VI]+')
@@ -26,8 +26,8 @@ def get_box_data(soup):
         # UTF-8 characters that separate data
         split_char = ':\xc2\xa0'
 
-        # check if this table row one we want
-        permissable_datum = ['Location', 'Page Views', 'FA', 'Type', 'Elevation']
+        # check if this table row one we want   
+        permissable_datum = ['Location', 'Page Views', 'FA', 'Type', 'Elevation', 'Season', 'Submitted By']
         perRE = re.compile("|".join(permissable_datum))
         perMatch = perRE.search(tr_str)
 
@@ -38,7 +38,7 @@ def get_box_data(soup):
             head = i[0].strip().replace(' ','_').lower()
             body = i[1].strip()
 
-            # Location body has junk in it like "\xc2\xa0View Map\xc2\xa0\xc2\xa0Incorrect?"
+            # Location body has junk in it like "\xc2\xa0Incorrect?"
             GPSmatch = GPSre.search(body)
             if GPSmatch is not None:
                 body = GPSmatch.group(0)
@@ -83,31 +83,21 @@ def get_area_hierarchy(soup):
    return { 'area_hierarchy': parent }
 
 def get_description(soup):
+    # TODO test /v/astrolizard/109680280
 
-    detail = {}
+    detail = []
     for h3 in soup.find_all('h3', { 'class': "dkorange" }):
 
-        # encode html to scan with regex
-        h3_str = h3.get_text().encode('utf-8', errors = 'ignore')
+        # text is the element after the h3
+        body = h3.next_sibling
 
-        # headers of info we want
-        permissable_datum = ['Description', 'Getting There', 'Protection', 'Location']
+        # save text
+        detail_str = body.encode('utf-8', errors = 'ignore')
+        detail.append(detail_str[18:-22])
 
-        # see which one matches
-        for head in permissable_datum:
-            perMatch = re.search(head, h3_str)
-            if perMatch != None:
+    combined_txt = '\n'.join(detail)
 
-                # text is the element after the h3
-                body = h3.next_sibling
-
-                # save text
-                detail_str = body.get_text().encode('utf-8', errors = 'ignore')
-
-                head = head.replace(' ','_').lower()
-                detail[head] = detail_str.strip()
-
-    return detail
+    return { 'detail': combined_txt }
 
 
 def get_route_name(soup):

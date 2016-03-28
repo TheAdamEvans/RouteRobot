@@ -3,11 +3,8 @@ from Scraper import Scraper
 import json
 import pickle
 
-
-ROOT_HREF = '/v/the-nut-tree-boulders/105734016'
-#ROOT_HREF = '/v/utah/105708957'
-
-DATA_DIR = './test_data/'
+ROOT_HREF = '/v/sand-rock/105905184'
+DATA_DIR = './data/'
 
 def traverse(node):
 
@@ -62,10 +59,10 @@ if __name__ == '__main__':
             # returns destination object
 
             # write out to file.. for viz??
-            BIG_JSON = DATA_DIR + dest.nickname + '.json'
-            with open(BIG_JSON, 'w+') as dump:
-                flat = json.dumps(all_dest, default=lambda o: o.__dict__)
-                dump.write(flat)
+            # BIG_JSON = DATA_DIR + dest.nickname + '.json'
+            # with open(BIG_JSON, 'w+') as dump:
+            #     flat = json.dumps(all_dest, default=lambda o: o.__dict__)
+            #     dump.write(flat)
 
             # save destination object as pickle
             BIG_PICKLE = DATA_DIR + dest.nickname + '.pickle'
