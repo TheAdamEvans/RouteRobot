@@ -122,6 +122,9 @@ def get_route_name(soup):
     return { 'name': route_name }
 
 def get_star_rating(soup):
+
+    # starbest is totally unreliable
+    # /v/religious-retreat/109207355 has a 1.0 rating = 'bomb'
     
     star_rating = {}
     

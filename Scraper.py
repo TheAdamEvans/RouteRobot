@@ -18,7 +18,7 @@ class Scraper(object):
             mp_page = urlopen('http://www.mountainproject.com' + href)
         except:
             print href + ' failed to load!!'
-            return None
+            self.soup = None
         else:
             mp_html = mp_page.read()
             self.soup = BeautifulSoup(mp_html, 'html.parser')
@@ -72,27 +72,28 @@ class Scraper(object):
 
     def create_destination(self):
 
-        # what type of destination is this?
-        youContainer = self.soup.find(id="youContainer")
-        is_area = re.search('You & This Area',youContainer.get_text()) != None
-        is_route = re.search('You & This Route',youContainer.get_text()) != None
+        if self.soup:
+            # what type of destination is this?
+            youContainer = self.soup.find(id="youContainer")
+            is_area = re.search('You & This Area',youContainer.get_text()) != None
+            is_route = re.search('You & This Route',youContainer.get_text()) != None
 
-        if not is_area and not is_route:
-            # this is the root
-            # not a place you can visit
-            dest = None
-        else:
-            # grab features from html
-            feature = sr.get_general(self.soup)
-            dest = Destination(self.href, feature)
-            dest.is_area = is_area
-            dest.is_route = is_route
+            if not is_area and not is_route:
+                # this is /v/
+                # not a place you can visit
+                dest = None
+            else:
+                # grab features from html
+                feature = sr.get_general(self.soup)
+                dest = Destination(self.href, feature)
+                dest.is_area = is_area
+                dest.is_route = is_route
 
-            # more scraping is necessary for routes
-            if dest.is_route:
-                dest.update_feature(sr.get_grade(self.soup))
-                dest.update_feature(sr.get_protect_rate(self.soup))
-                dest.update_feature(sr.get_star_rating(self.soup))
-                dest.update_feature(sr.get_type(feature['type']))
+                # more scraping is necessary for routes
+                if dest.is_route:
+                    dest.update_feature(sr.get_grade(self.soup))
+                    dest.update_feature(sr.get_protect_rate(self.soup))
+                    dest.update_feature(sr.get_star_rating(self.soup))
+                    dest.update_feature(sr.get_type(feature['type']))
 
-        return dest
+            return dest

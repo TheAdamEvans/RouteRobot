@@ -3,8 +3,8 @@ from Scraper import Scraper
 import json
 import pickle
 
-ROOT_HREF = '/v/kolob-canyon/105717086'
-DATA_DIR = './test_data/'
+ROOT_HREF = '/v/'
+DATA_DIR = './data/'
 
 def traverse(node):
 

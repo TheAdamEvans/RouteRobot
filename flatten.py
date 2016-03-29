@@ -1,9 +1,6 @@
+import os
 import pickle
 import pandas as pd
-import numpy as np
-import os
-
-DATA_DIR = './test_data/'
 
 def grab_children(dest, collect):
     if hasattr(dest, 'children'):
@@ -19,7 +16,9 @@ def climb_from_dest(dest):
         climb.set_index(climb.href.values, inplace = True, verify_integrity = False)
         return climb
 
-def combine_pickle(DATA_DIR):   
+def combine_pickle(DATA_DIR):
+
+    # TODO do this in fewer lines
     collect_climb = []
     for area in os.listdir(DATA_DIR):
         if area[-len('.pickle'):] != '.pickle':
@@ -31,15 +30,3 @@ def combine_pickle(DATA_DIR):
     
     climb = pd.concat(collect_climb)
     return climb
-
-# import sys
-# pct_area = np.mean(climb['is_area'])
-# pct_route = np.mean(climb['is_route'])
-# if pct_area + pct_route < (1 - sys.float_info.epsilon):
-#     print "One or more records WAS NEITHER ROUTE NOR AREA"
-
-climb = combine_pickle(DATA_DIR)
-print climb.iloc[0]
-
-
-
