@@ -13,15 +13,16 @@ def climb_from_dest(dest):
     kidnapped = grab_children(dest, collect = []) # kidnapping jokes are not okay
     climb = pd.DataFrame.from_dict(kidnapped) # neither are dict jokes
     if max(climb.shape) > 0:
-        climb.set_index(climb.href.values, inplace = True, verify_integrity = False)
+        climb.set_index(climb.href.values, inplace = True, verify_integrity = True)
         return climb
 
 def combine_pickle(DATA_DIR):
-
+    
     # TODO do this in fewer lines
     collect_climb = []
     for area in os.listdir(DATA_DIR):
-        if area[-len('.pickle'):] != '.pickle':
+        pkl = '.pickle'
+        if area[-len(pkl):] != pkl:
             pass
         else:
             dest = pickle.load(open(DATA_DIR + area, 'rb'))        
