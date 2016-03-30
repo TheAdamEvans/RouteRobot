@@ -17,11 +17,16 @@ class Scraper(object):
         try:
             mp_page = urlopen('http://www.mountainproject.com' + href)
         except:
-            print href + ' failed to load!!'
+            print href + ' failed to LOAD!'
             self.soup = None
         else:
-            mp_html = mp_page.read()
-            self.soup = BeautifulSoup(mp_html, 'html.parser')
+            try:
+                mp_html = mp_page.read()
+            except:
+                print href + ' failed to READ!'
+                self.soup = None
+            else:
+                self.soup = BeautifulSoup(mp_html, 'html.parser')
 
     def get_child_href(self, dest_iter):
     
