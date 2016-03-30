@@ -4,7 +4,7 @@ import json
 import pickle
 
 ROOT_HREF = '/v/'
-DATA_DIR = './data/'
+DATA_DIR = './state_data/'
 
 def traverse(node):
 
