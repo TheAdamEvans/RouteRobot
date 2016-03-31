@@ -48,11 +48,10 @@ class HowSimilar(BaseEstimator):
     def fit(self, shrunk, y=None):
         # calculate cosines
         t0 = time()
-        print "Shrunk is", shrunk.shape, type(shrunk)
-        #print where(self.climb_index == self.href)
         pos = self.climb_index == self.href
         sim = cosine_similarity(shrunk[pos], shrunk)
-        self.sim = pd.DataFrame({self.href: sim[0]}, index=self.climb_index)
+        self.sim = pd.DataFrame(sim[0], index=self.climb_index)
+        self.sim.columns = ['sim']
         print 'Similarity matrix took %0.1f seconds' % (time()-t0)
         return self
 
