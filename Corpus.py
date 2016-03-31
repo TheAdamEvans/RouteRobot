@@ -11,12 +11,11 @@ class PrepareCorpus(BaseEstimator):
         return None
 
     def fit(self, climb, y=None):
-        descriptive = self.get_total_climb_description(climb)
-        self.descriptive = descriptive
         return self
 
     def transform(self, climb):
-        return self.descriptive
+        descriptive = self.get_total_climb_description(climb)
+        return descriptive
 
     def combine_text(self, jess):
         
@@ -41,13 +40,19 @@ class PrepareCorpus(BaseEstimator):
 
 class HowSimilar(BaseEstimator):
 
-    def __init__(self):
+    def __init__(self, href, climb_index):
+        self.href = href
+        self.climb_index = climb_index
         return None
 
     def fit(self, shrunk, y=None):
         # calculate cosines
         t0 = time()
-        self.sim = cosine_similarity(shrunk, shrunk)
+        print "Shrunk is", shrunk.shape, type(shrunk)
+        #print where(self.climb_index == self.href)
+        pos = self.climb_index == self.href
+        sim = cosine_similarity(shrunk[pos], shrunk)
+        self.sim = pd.DataFrame({self.href: sim[0]}, index=self.climb_index)
         print 'Similarity matrix took %0.1f seconds' % (time()-t0)
         return self
 
