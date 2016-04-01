@@ -10,7 +10,7 @@ seq_len = 25
 nb_epoch = 50
 
 # get just the route names -- will need to clean this data further
-# to remove space characters
+# to remove space characters and information after route name
 df = pd.read_csv('route_name.txt', header=None).loc[:, 1]
 df = df.dropna()
 # vocabulary
@@ -31,8 +31,8 @@ for i in range(0, len(text) - maxlen, step):
     next_chars.append(text[i + maxlen])
 X = np.zeros((len(seqs), seq_len, len(chars)), dtype=np.bool)
 y = np.zeros((len(seqs), len(chars)), dtype=np.bool)
-for i, sentence in enumerate(seqs):
-    for t, char in enumerate(sentence):
+for i, seq in enumerate(seqs):
+    for t, char in enumerate(seq):
         X[i, t, char_to_idx[char]] = 1
     y[i, char_to_idx[next_chars[i]]] = 1
 
