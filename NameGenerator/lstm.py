@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import pandas as pd
 from keras.models import Sequential
@@ -7,7 +8,7 @@ from keras.optimizers import Adagrad
 # starting params
 hidden1_size = 128
 seq_len = 25
-nb_epoch = 50
+nb_epoch = 25
 
 # get just the route names -- will need to clean this data further
 # to remove space characters and information after route name
