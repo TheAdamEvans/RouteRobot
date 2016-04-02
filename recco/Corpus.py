@@ -34,7 +34,8 @@ class PrepareCorpus(BaseEstimator):
             cmbtxt = self.combine_text(cmb)
             collect.append(cmbtxt)
 
-        print "Combined text from %d rows" % len(collect)
+        print "Preprocessed %d text segments" % len(collect)
+
         return collect
 
 

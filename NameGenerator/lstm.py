@@ -4,21 +4,31 @@ from keras.models import Sequential
 from keras.layers import LSTM, Dense, Activation
 from keras.optimizers import Adagrad
 
-# params
+# starting params
 hidden1_size = 128
 seq_len = 25
 nb_epoch = 50
 
 # get just the route names -- will need to clean this data further
 # to remove space characters and information after route name
-df = pd.read_csv('route_name.txt', header=None).loc[:, 1]
+# preprocessed with strings, find and delete " ,
+df = pd.read_csv('route_name.txt', header=None)
 df = df.dropna()
+print "read %d route names" % df.shape[0]
+
 # vocabulary
-text = ''.join(list(df.values))
+text = ''.join(df[0].tolist())
 chars = set(text)
 print 'vocab:', chars
 char_to_idx = dict((c, i) for i, c in enumerate(chars))
 idx_to_char = dict((i, c) for i, c in enumerate(chars))
+
+def print_prediction(prediction):
+    for p in prediction:
+        m = max(p)
+        index = [i for i, j in enumerate(p) if j == m]
+        max_likely_letter = idx_to_char[index[0]]
+        sys.stdout.write(max_likely_letter)
 
 # vectorize data by chunking into overlapping sequences of equal length
 # there is a way to use variable-length seqs with rnns, so we could use the individual names
@@ -50,5 +60,11 @@ for epoch in range(nb_epoch):
     print
     print '-' * 50
     print 'Epoch ' + str(epoch)
-    model_hist = model.fit(X, y, nb_epoch=1)
+    model_hist = model.fit(X, y, nb_epoch=nb_epoch)
+
+    # attempt to see output
+    # needs to loop on itself???
+    seed = X[:1000]
+    prediction = model.predict(seed)
+    print_prediction(prediction)
 

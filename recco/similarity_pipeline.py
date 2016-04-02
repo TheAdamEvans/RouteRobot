@@ -5,7 +5,6 @@ from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.decomposition import TruncatedSVD
 
-import flatten as fat
 from Corpus import PrepareCorpus
 from Corpus import HowSimilar
 from Grade import PrepareGrade
@@ -14,32 +13,22 @@ from Grade import GradeSimilar
 
 DATA_DIR = './utah_data/'
 
-print 'Reading pickles..'
-climb = fat.combine_pickle(DATA_DIR)
-# climb = climb.head(1000)
-print "Shape of climb dataframe is", climb.shape
-climb.to_pickle(DATA_DIR + '_climb_dataframe')
 
-href = climb['href'][-5]
+print 'Reading climb dataframe pickle from ' + DATA_DIR
+climb = pd.read_pickle(DATA_DIR + '_climb_dataframe')
+print "Shape of climb dataframe is", climb.shape
+
+href = '/v/pocket-rocket/106297965'
+# TODO check if href in climb
 
 # create grade matrix
-pipeline = Pipeline([
+pipeline_grade = Pipeline([
     ('cast', PrepareGrade()),
     ('grading', GradeSimilar(href=href, climb_index=climb.index))
 ])
 
-FIT = pipeline.fit(climb)
-grade_scores = FIT.transform(climb)
-
-# print "Grade scores are", grade_scores.shape, type(grade_scores)
-# grade_scores.to_pickle(DATA_DIR + '_grade_matrix')
-
-# x = pd.read_pickle(DATA_DIR + '_grade_matrix')
-# print "Grades X are", x.shape, type(x)
-# print x.head()
-
 # create similarity matrix of climbs based on text similarity
-pipeline = Pipeline([
+pipeline_sim = Pipeline([
     ('preprocess', PrepareCorpus()),
     ('tfidf', TfidfVectorizer(
         decode_error='ignore', stop_words='english',
@@ -49,18 +38,18 @@ pipeline = Pipeline([
     ('similarity', HowSimilar(href=href, climb_index=climb.index))
 ])
 
-FIT = pipeline.fit(climb)
+FIT = pipeline_grade.fit(climb)
+grade_scores = FIT.transform(climb)
+
+FIT = pipeline_sim.fit(climb)
 sim = FIT.transform(climb)
 
 print "SIM is", sim.shape, type(sim)
 
-# sim.to_pickle(DATA_DIR + '_similarity_matrix')
-# x = pd.read_pickle(DATA_DIR + '_similarity_matrix')
-# print "SIM is", x.shape, type(x)
-
+# combine
 recco = pd.concat([sim, grade_scores], axis=1)
-print "recco columns are", recco.columns, recco.shape
-#recco['best'] = recco['sim'] + (0.5 * recco['grade_score'])
-recco.sort_values('sim', inplace=True, ascending=False)
-print recco[:10]
+recco['overall'] = recco['sim'] + recco['grade_score'] / 2 # BULLSHIT
+recco.sort_values('overall', inplace=True, ascending=False)
 
+print href
+print recco[['sim', 'grade_score']][1:50]
