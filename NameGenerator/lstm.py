@@ -20,6 +20,7 @@ names = df['name'][df['is_route']].dropna().values
 names = [name for name in names if re.search('^[A-Za-z0-9 !@#$%^&*_-]*$', name)]
 names = [name.lower() for name in names]
 names = [' '.join(name.split()) for name in names]
+names = list(set(names))
 text = '\n'.join(names)
 
 # vocabulary
