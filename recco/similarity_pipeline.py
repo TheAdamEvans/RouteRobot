@@ -10,12 +10,12 @@ from Corpus import HowSimilar
 from Grade import PrepareGrade
 from Grade import GradeSimilar
 
-
-DATA_DIR = './utah_data/'
+DATA_DIR = 'utah_data/'
 
 
 print 'Reading climb dataframe pickle from ' + DATA_DIR
-climb = pd.read_pickle(DATA_DIR + '_climb_dataframe')
+## SWAP OUT FOR FULL DATA
+climb = pd.read_pickle(DATA_DIR + '_climb_no_children')
 print "Shape of climb dataframe is", climb.shape
 
 href = '/v/pocket-rocket/106297965'
@@ -32,9 +32,9 @@ pipeline_sim = Pipeline([
     ('preprocess', PrepareCorpus()),
     ('tfidf', TfidfVectorizer(
         decode_error='ignore', stop_words='english',
-        sublinear_tf=True, ngram_range=(1, 2))),
+        sublinear_tf=True, ngram_range=(1, 1))),
     ('svd', TruncatedSVD(
-        n_components=100, random_state=42)),
+        n_components=50, random_state=42)),
     ('similarity', HowSimilar(href=href, climb_index=climb.index))
 ])
 
