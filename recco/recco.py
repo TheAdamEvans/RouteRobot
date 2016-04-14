@@ -11,10 +11,6 @@ import re
 
 import itertools
 
-
-DATA_DIR = '../utah_data/'
-
-
 def score01(grade, ideal):
     return 1 - abs(ideal - grade)
 
@@ -66,11 +62,13 @@ def match_type(climb, href, type_of_route):
     type_score = all_type_score.sum(axis='columns')
     return type_score / max(type_score)
 
-def give_recommendation(climb, href, top=10):
+def give_recommendation(climb, href, top=20):
 
     if not href in climb.index:
         print 'href not in climb'
         return
+
+    print "Creating recommendation system..."
 
     # isolate description we care about
     combined = climb['description'].astype(str) + climb['other_text'].astype(str)
@@ -127,14 +125,15 @@ def give_recommendation(climb, href, top=10):
     charlie['best'] = charlie.sum(axis='columns')
     charlie.sort_values('best', ascending=False, inplace=True)
 
+    print charlie.index[:top]
     return charlie.index[:top]
 
 
 
-climb = pd.read_csv(DATA_DIR + '_climb', index_col = 0)
+climb = pd.read_csv('_climb', index_col = 0)
 print "Shape of climb dataframe is", climb.shape
 
-href = '/v/beckeys-wall/105740507'
+href = '/v/quergang-traverse/107271695'
 
 recco_href = give_recommendation(climb, href)
 
