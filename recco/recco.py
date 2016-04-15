@@ -62,11 +62,8 @@ def match_type(climb, href, type_of_route):
     type_score = all_type_score.sum(axis='columns')
     return type_score / max(type_score)
 
-def give_recommendation(climb, href, top=20):
-
-    if not href in climb.index:
-        print 'href not in climb'
-        return
+def create_recommendation_system(climb):
+    """ Compress text data into n_components """
 
     print "Creating recommendation system..."
 
@@ -86,8 +83,11 @@ def give_recommendation(climb, href, top=20):
         n_components=100, random_state=42)
     shrunk = svd.fit_transform(TFIDF)
 
+    return shrunk
 
-    ### SCORING ###
+def give_recommendation(climb, shrunk, href, top=20):
+    """ Score this href against the others """
+
     # calculate similarity
     pos = climb.index == href
     sim = cosine_similarity(shrunk[pos], shrunk)
@@ -114,8 +114,8 @@ def give_recommendation(climb, href, top=20):
         })
 
     # multiply weights
-    charlie['sim'] = charlie['sim'] * 25
-    charlie['grade'] = charlie['grade'] * 15
+    charlie['sim'] = charlie['sim'] * 40
+    charlie['grade'] = charlie['grade'] * 10
     charlie['height'] = charlie['height'] * 5
     charlie['stars'] = charlie['stars'] * 15
     charlie['votes'] = charlie['votes'] * 5
@@ -125,7 +125,7 @@ def give_recommendation(climb, href, top=20):
     charlie['best'] = charlie.sum(axis='columns')
     charlie.sort_values('best', ascending=False, inplace=True)
 
-    print charlie.index[:top]
+    print charlie[:top]
     return charlie.index[:top]
 
 
@@ -135,7 +135,9 @@ print "Shape of climb dataframe is", climb.shape
 
 href = '/v/quergang-traverse/107271695'
 
-recco_href = give_recommendation(climb, href)
+shrunk = create_recommendation_system(climb)
+
+recco_href = give_recommendation(climb, shrunk, href)
 
 print climb.loc[recco_href][['rateYDS','rateHueco','starvotes','staraverage','feet','description']]
 
