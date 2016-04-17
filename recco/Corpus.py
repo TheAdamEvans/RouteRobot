@@ -3,7 +3,6 @@ import pandas as pd
 
 from sklearn.base import BaseEstimator
 from sklearn.metrics.pairwise import cosine_similarity
-#from sklearn.metrics.pairwise import linear_kernel
 
 class PrepareCorpus(BaseEstimator):
 
