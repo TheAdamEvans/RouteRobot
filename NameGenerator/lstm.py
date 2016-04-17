@@ -1,14 +1,16 @@
+from __future__ import print_function
+
 import re
 import sys
 import random
 import numpy as np
 import pandas as pd
 from keras.models import Sequential
-from keras.layers import LSTM, Dense, Activation
+from keras.layers import LSTM, Dense, Dropout
 from keras.optimizers import RMSprop
 
 # starting params
-hidden1_size = 128
+hidden1_size = 32
 seq_len = 5
 nb_epoch = 25
 
@@ -25,7 +27,7 @@ text = '\n'.join(names)
 
 # vocabulary
 chars = set(text)
-print 'vocab:', chars
+print('vocab:', chars)
 char_to_idx = dict((c, i) for i, c in enumerate(chars))
 idx_to_char = dict((i, c) for i, c in enumerate(chars))
 
@@ -44,11 +46,11 @@ for i, seq in enumerate(seqs):
     y[i, char_to_idx[next_chars[i]]] = 1
 
 
-# model def -- single hidden layer for now
+# model def -- single hidden layer with heavy regularization
 model = Sequential()
-model.add(LSTM(hidden1_size, return_sequences=False,  input_shape=(seq_len, len(chars))))
-model.add(Dense(len(chars)))
-model.add(Activation('softmax'))
+model.add(LSTM(hidden1_size, input_shape=(seq_len, len(chars)), dropout_U=0.2, dropout_W=0.2))
+model.add(Dropout(0.2))
+model.add(Dense(len(chars), activation='softmax'))
 opt = RMSprop()
 model.compile(loss='categorical_crossentropy', optimizer=opt)
 
@@ -62,9 +64,9 @@ def sample(a, temperature=1.0):
 
 # can sample from model in this loop
 for epoch in range(nb_epoch):
-    print
-    print '-' * 50
-    print 'Epoch ' + str(epoch)
+    print()
+    print('-' * 50)
+    print('Epoch ' + str(epoch))
     model_hist = model.fit(X, y, nb_epoch=1)
 
     start_index = random.randint(0, len(text) - seq_len - 1)
