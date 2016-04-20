@@ -10,9 +10,12 @@ from keras.layers import LSTM, Dense, Dropout
 from keras.optimizers import RMSprop
 
 # starting params
-hidden1_size = 32
-seq_len = 5
-nb_epoch = 25
+hidden1_size = 128
+seq_len = 24
+nb_epoch = 30
+
+# mistake / creativity tradeoff
+diversity = 0.8
 
 # get just the route names
 df = pd.read_csv('summary_data.csv')
@@ -61,7 +64,6 @@ def sample(a, temperature=1.0):
     a = np.exp(a) / np.sum(np.exp(a))
     return np.argmax(np.random.multinomial(1, a, 1))
 
-
 # can sample from model in this loop
 for epoch in range(nb_epoch):
     print()
@@ -71,17 +73,15 @@ for epoch in range(nb_epoch):
 
     start_index = random.randint(0, len(text) - seq_len - 1)
 
-    for diversity in [0.2, 0.5, 1.0, 1.2]:
-        print()
-        print('----- diversity:', diversity)
+    generated = ''
+    sentence = text[start_index: start_index + seq_len]
+    generated += sentence
+    print('----- Generating with seed: "' + sentence + '"')
+    sys.stdout.write(generated)
 
-        generated = ''
-        sentence = text[start_index: start_index + seq_len]
-        generated += sentence
-        print('----- Generating with seed: "' + sentence + '"')
-        sys.stdout.write(generated)
-
-        for i in range(400):
+    # vomit names when the model is done training
+    if epoch == nb_epoch-1:
+        for i in range(20000):
             x = np.zeros((1, seq_len, len(chars)))
             for t, char in enumerate(sentence):
                 x[0, t, char_to_idx[char]] = 1.
@@ -96,4 +96,3 @@ for epoch in range(nb_epoch):
             sys.stdout.write(next_char)
             sys.stdout.flush()
         print()
-
