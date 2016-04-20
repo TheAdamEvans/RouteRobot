@@ -4,6 +4,8 @@ from Destination import Destination
 
 from statsmodels.distributions.empirical_distribution import ECDF
 
+def find_id(href):
+    return re.search(r'(\d+)$',href).group(1)
 
 def scale01(feature):
     # always use on an entire column
@@ -22,6 +24,7 @@ print "Shape of climb dataframe is", climb.shape
 # get rid of destination object
 del climb['children']
 
+#climb['href_id'] = map(find_id, climb.index)
 
 # allows mixing of Bouldering and Sport/Trad routes
 climb['floatHueco'] = map(cl.convert_hueco, climb['rateHueco'])
