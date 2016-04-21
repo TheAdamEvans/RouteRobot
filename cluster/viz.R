@@ -1,3 +1,5 @@
+library(ggplot2)
+
 YDS_histogram <- function(climb){
   # filter to only routes
   climb = climb[climb$rateYDS != '',]
@@ -75,6 +77,45 @@ Hueco_histogram <- function(climb){
   plt = plt + geom_bar(stat='identity', aes(x = clean_label, y = num_climbs))
   plt = plt + labs(title="Climbs are Most Often V6")
   plt = plt + labs(x="Difficulty", y="Number of Climbs")
+  
+  return(plt)
+}
+
+trend_scatter <- function(climb, x_string, y_string, limits = c(), log_scale = FALSE) {
+  # consider marginal plots here??
+  vote_thresh = 3
+  
+  # throw out NA records
+  climb = climb[!is.na(climb$max_type),]
+  
+  # jitter heaped values
+  climb[[y_string]] = jitter(climb[[y_string]])
+  climb[[x_string]] = jitter(climb[[x_string]])
+  
+  # filter to reasonable lengths
+  if(length(limits) > 0) {
+    within_limits = climb[[x_string]]>limits[1] & climb[[x_string]]<limits[2]
+    climb = climb[within_limits,]
+  }
+  
+  # only consider respectable vote counts
+  climb = climb[climb$starvotes>vote_thresh,]
+  
+  # plot
+  plt = ggplot(data=climb, aes_string(
+    x = x_string, y = y_string,
+    colour = 'max_type'
+    ), size = 1)
+  plt = plt + geom_point(alpha = 0.5)
+  # guide legend = 'None'
+  # log scale if you're into that
+  if(log_scale) { plt = plt + scale_x_log10() }
+  # add trend lines
+  plt = plt + stat_smooth(method = 'lm', se = FALSE)
+  
+  # title and axes labels
+  plt = plt + labs(title="Taller Climbs Tend to Be Rated Higher")
+  plt = plt + labs(x=x_string, y=y_string)
   
   return(plt)
 }

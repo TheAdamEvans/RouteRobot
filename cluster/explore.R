@@ -1,5 +1,28 @@
 library(sqldf)
 
+get_max_type <- function(climb) {
+  trim <- function (x) gsub("^\\s+|\\s+$", "", x)
+  
+  equip_type = c('boulder','trad','sport','tr')
+  
+  # UNSPEAKABLE CODE to get one column describing the type
+  max_type = unlist(apply(climb, 1, function(route) {
+    type_iter = lapply(equip_type, function(t) {
+      silly = as.logical(trim(route[t]))
+      if (silly) {
+        return(t)
+      } else {
+        return(NULL)
+      }
+    })
+    type = max(unlist(type_iter))
+    if (is.null(type)) { type = NA }
+    return(type)
+  }))
+  max_type[max_type=="-Inf"] <- NA
+  return(max_type)
+}
+
 my.pwd = '~/RouteRobot/cluster/'
 
 # copied data here after running /scraping/driver.py
@@ -16,15 +39,15 @@ climb = data.frame(
   pitches = as.numeric(d$pitches),
   protect_rate = as.character(d$protect_rate),
   commitment = as.character(d$commitment),
-  boulder = as.logical(d$boulder),
-  sport = as.logical(d$sport),
+  ice = unlist(lapply(d$ice,is.na)), # TODO cast aid, mixed, ice, alpine
+  mixed = unlist(lapply(d$mixed,is.na)),
+  aid = unlist(lapply(d$aid,is.na)),
+  alpine = unlist(lapply(d$alpine,is.na)),
   trad = as.logical(d$trad),
+  sport = as.logical(d$sport),
+  boulder = as.logical(d$boulder),
   tr = as.logical(d$tr),
-  aid = as.logical(d$aid),
-  alpine = as.logical(d$alpine),
   chipped = as.logical(d$chipped),
-  ice = as.logical(d$ice),
-  mixed = as.logical(d$mixed),
   grade = as.numeric(d$grade),
   rateHueco = as.character(d$rateHueco),
   rateYDS = as.character(d$rateYDS),
@@ -40,6 +63,17 @@ climb = data.frame(
   fa = as.character(d$fa)
 )
 
+# shitty code to get an approximate grouping
+climb$max_type = get_max_type(climb)
+
 source(paste0(my.pwd,'viz.R'))
 print(YDS_histogram(climb))
 print(Hueco_histogram(climb))
+print(trend_scatter(
+  climb, x_string = 'feet', y_string = 'staraverage',
+  log_scale = TRUE, limits = c(5,2000)
+))
+print(trend_scatter(
+  climb, x_string = 'grade', y_string = 'staraverage'
+))
+
