@@ -146,8 +146,12 @@ def get_description(soup):
 
     if len(other_text) > 0:
         detail['other_text'] = '\n'.join(other_text)
-        # combine description with other text -- questionable but appropriate
-        detail['description'] = detail['description'] + detail['other_text']
+        if 'description' in detail:
+            # combine description with other text -- questionable but appropriate
+            detail['description'] = detail['description'] + detail['other_text']
+        else:
+            detail['description'] = detail['other_text']
+            del detail['other_text']
 
     return detail
 

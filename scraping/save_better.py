@@ -5,9 +5,6 @@ import grade_cleaner as cl
 from destination import Destination
 from statsmodels.distributions.empirical_distribution import ECDF
 
-DATA_DIR = 'berk_data/'
-SAVE_AS = 'climb.csv'
-
 
 def scale01(feature):
     """ Scales entire column onto [0,1] using ECDF """
@@ -64,7 +61,8 @@ def combine_pickle(DATA_DIR):
     return climb
 
 
-if __name__ == '__main__':
+def cast_all_pickles(DATA_DIR, SAVE_AS):
+    """ Read in directory of pickles and return workable DataFrame """
 
     # read in data from directory of pickles
     climb = combine_pickle(DATA_DIR)
@@ -91,3 +89,6 @@ if __name__ == '__main__':
     climb['grade'] = climb[['ratePCTHueco','ratePCTYDS']].max(axis='columns')
     
     climb.to_csv(DATA_DIR + SAVE_AS)
+    print "Wrote climb.csv to %s" % DATA_DIR
+
+    return climb

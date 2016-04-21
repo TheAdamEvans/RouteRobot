@@ -1,3 +1,5 @@
+import re
+
 class Destination(object):
     """ Abstraction of routes and areas """
 
@@ -10,7 +12,7 @@ class Destination(object):
 
         # having a nickname is nice
         if self.name:
-            self.nickname = self.name.strip().lower().replace(' ','')
+            self.nickname = ''.join(re.findall("[a-zA-Z]+", self.name)).lower()
         else:
             self.nickname = self.href
 

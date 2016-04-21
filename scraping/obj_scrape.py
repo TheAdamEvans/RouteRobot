@@ -3,9 +3,6 @@ import json
 import pickle
 from scraper import Scraper
 
-ROOT_HREF = '105733965' # berkeley
-DATA_DIR = './berk_data/'
-
 def traverse(node):
     """ Pre-order depth-first search of Mountain Project tree """
 
@@ -27,7 +24,8 @@ def traverse(node):
     node.children = children
     return node
 
-if __name__ == '__main__':
+
+def scrape_all(ROOT_HREF, DATA_DIR):
     """ Scrape Mountain Project and save Destination objects """
     
     # iterate over children of the root (e.g. states in the US)
@@ -65,3 +63,4 @@ if __name__ == '__main__':
 
             flourish = '<<<'+'-'*25
             print flourish + dest.nickname + flourish[::-1]
+            print
