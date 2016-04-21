@@ -51,7 +51,8 @@ def combine_pickle(DATA_DIR):
         else:
             dest = pickle.load(open(DATA_DIR + area, 'rb'))        
             partial = climb_from_dest(dest)
-            print 'Found %d destinations in %s' % (partial.shape[0], dest.nickname)
+            if partial is not None:
+                print 'Found %d destinations in %s' % (partial.shape[0], dest.nickname)
             collect_climb.append(partial)
     climb = pd.concat(collect_climb, axis=0)
 
