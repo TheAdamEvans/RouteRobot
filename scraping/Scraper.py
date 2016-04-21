@@ -1,8 +1,8 @@
 import re
+import souper as sr
 from urllib2 import urlopen
 from bs4 import BeautifulSoup
-import souper as sr
-from Destination import Destination
+from destination import Destination
 
 class Scraper(object):
     """

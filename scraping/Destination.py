@@ -1,6 +1,5 @@
-import re
-
 class Destination(object):
+    """ Abstraction of routes and areas """
 
     def __init__(self, href, feature):
         self.href = href
@@ -14,6 +13,7 @@ class Destination(object):
             self.nickname = self.name.strip().lower().replace(' ','')
         else:
             self.nickname = self.href
+
 
     def update_feature(self, feature):
         if feature:

@@ -1,10 +1,10 @@
 import os
-from Scraper import Scraper
 import json
 import pickle
+from scraper import Scraper
 
-ROOT_HREF = '105734016' # nut tree boulders
-DATA_DIR = './nut_data/'
+ROOT_HREF = '105733965' # berkeley
+DATA_DIR = './berk_data/'
 
 def traverse(node):
     """ Pre-order depth-first search of Mountain Project tree """

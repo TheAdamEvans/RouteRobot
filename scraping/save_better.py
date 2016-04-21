@@ -1,8 +1,8 @@
 import os
 import pickle
 import pandas as pd
-import cleaner as cl
-from Destination import Destination
+import grade_cleaner as cl
+from destination import Destination
 from statsmodels.distributions.empirical_distribution import ECDF
 
 DATA_DIR = 'berk_data/'
@@ -54,6 +54,7 @@ def combine_pickle(DATA_DIR):
         else:
             dest = pickle.load(open(DATA_DIR + area, 'rb'))        
             partial = climb_from_dest(dest)
+            print 'Found %d destinations in %s' % (partial.shape[0], dest.nickname)
             collect_climb.append(partial)
     climb = pd.concat(collect_climb, axis=0)
 
@@ -65,18 +66,16 @@ def combine_pickle(DATA_DIR):
 
 if __name__ == '__main__':
 
-    # track of columns in need of casting
-    numeric_col = ['page_views','pitches','feet','staraverage','starbest','starvotes']
-    boolean_col = ['boulder','chipped','sport','trad','tr']
-
     # read in data from directory of pickles
     climb = combine_pickle(DATA_DIR)
-    print 'Found %d destinations in %s' % (climb.shape[0], DATA_DIR)
     
     # cast columns appropriately
+    numeric_col = ['page_views','pitches','feet','staraverage','starbest','starvotes']
     for col in numeric_col:
         if col in climb.columns:
             climb[col] = pd.to_numeric(climb[col], errors='coerce')
+
+    boolean_col = ['boulder','chipped','sport','trad','tr']
     for col in boolean_col:
         if col in climb.columns:
             climb[col] = pd.notnull(climb[col])
