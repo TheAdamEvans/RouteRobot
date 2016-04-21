@@ -2,38 +2,63 @@ import urllib2
 import re
 from bs4 import NavigableString
 
+SPLIT_CHAR = ':\xc2\xa0'
+idRE = re.compile(r'(\d+)$')
 GPSre = re.compile(r'(\-?\d+(\.\d+)?),\s*(\-?\d+(\.\d+)?)')
 pitchRE = re.compile(r'^(\d)+ pitch')
 feetRE = re.compile(r'^(\d)+\'')
 commitmentRE = re.compile(r'Grade [VI]+')
+firstnbspRE = re.compile(r'\xc2\xa0')
+
+
+def find_id(href):
+    """ Extract numeric id from href """
+    ID = idRE.search(href)
+    if ID:
+        return ID.group(1)
+
+
+def get_route_name(soup):
+    """ Get huge text name at the top """
+
+    route_soup = soup.h1
+    route_name = route_soup.getText()
+    route_name = route_name.encode('utf-8' ,errors = 'ignore')
+
+    # get rid of break and anything after like Rock Climbing
+    NBSP = firstnbspRE.search(route_name)
+    if NBSP:
+        route_name = route_name[:NBSP.start()]
+    route_name = route_name.strip()
+
+    return { 'name': route_name }
+
 
 def get_box_data(soup):
-
+    """ Finds upper box with all sorts of morsels of info and returns dictionary """
+    
+    permissable_datum = ['Location', 'Page Views', 'FA', 'Type', 'Elevation', 'Season', 'Submitted By']
+        
     # find stats box in soup with regex
     page_table = soup.find_all('table')
     for box in page_table:
-        if re.search("Submitted By:",box.encode('utf-8')) != None: # TODO questionable logic
+        if re.search('Submitted By:',box.encode('utf-8')) != None:
+            # questionable logic here
             break
 
     box_data = {}
-
     for tr in box.find_all('tr'):
-
         # encode html to scan with regex
         tr_str = tr.encode('utf-8', errors = 'ignore')
 
-        # UTF-8 characters that separate data
-        split_char = ':\xc2\xa0'
-
-        # check if this table row one we want   
-        permissable_datum = ['Location', 'Page Views', 'FA', 'Type', 'Elevation', 'Season', 'Submitted By']
-        perRE = re.compile("|".join(permissable_datum))
+        # regex for matching any of the labels
+        perRE = re.compile('|'.join(permissable_datum))
         perMatch = perRE.search(tr_str)
 
         # if it is a permissable data row
         if perMatch != None:
             morsel = tr.get_text().encode('utf-8', errors = 'ignore')
-            i = morsel.split(split_char)
+            i = morsel.split(SPLIT_CHAR)
             head = i[0].strip().replace(' ','_').lower()
             body = i[1].strip()
 
@@ -51,12 +76,15 @@ def get_box_data(soup):
 
     return box_data
 
+
 def get_protect_rate(soup):
+    """ Finds protection rating (if there is one)
+    like PG13, R, X, A1, etc. and returns dictionary """
 
     # up there with with route name
     grade_table = soup.h3
     
-    # finds ratings like PG13, R, X, A1, etc.
+    # finds ratings 
     # destroys the grade spans and looks for text
     while grade_table.span != None:
         grade_table.span.decompose()
@@ -66,20 +94,29 @@ def get_protect_rate(soup):
     if protect_rate != "":
         return { 'protect_rate': protect_rate }
 
+
 def get_area_hierarchy(soup):
+    """ Returns list of parents all the way to the root """
 
-   navboxdiv = soup.find(id="navBox").div
-   href_list = navboxdiv.find_all('a')
+    navboxdiv = soup.find(id="navBox").div
+    href_list = navboxdiv.find_all('a')
 
-   parent = []
-   for h in href_list:
-       p = h.get('href')
-       p = p.encode('utf-8', errors = 'ignore')
-       parent.append(p)
+    parent = []
+    for h in href_list:
+        p = h.get('href')
+        p = p.encode('utf-8', errors = 'ignore')
+        p = find_id(p)
+        parent.append(p)
 
-   return { 'area_hierarchy': parent }
+    # omit root from the hierarchy
+    return { 'area_hierarchy': parent[1:] }
+
 
 def get_description(soup):
+    """ Grab text for use in analysis
+    Lots of routes have descriptive entires with headers other than Description
+    Choice here is to INCLUDE other text with Description
+    """
 
     standard_head = ['Description', 'Getting There', 'Protection', 'Location']
 
@@ -98,7 +135,6 @@ def get_description(soup):
             # these are the valuable text sections
             body = body.get_text()
             body = body.encode('utf-8', errors = 'ignore')
-
             head = h3.get_text().encode('utf-8', errors = 'ignore')
             head = head.strip('\xc2\xa0')
 
@@ -110,24 +146,19 @@ def get_description(soup):
 
     if len(other_text) > 0:
         detail['other_text'] = '\n'.join(other_text)
+        # combine description with other text -- questionable but appropriate
+        detail['description'] = detail['description'] + detail['other_text']
 
     return detail
 
-def get_route_name(soup):
-
-    route_soup = soup.h1.get_text()
-    route_name = route_soup.encode('utf-8' ,errors = 'ignore')
-    route_name = route_name.strip('\xc2\xa0 ')
-
-    return { 'name': route_name }
 
 def get_star_rating(soup):
+    """ find starvotes, staraverage """
 
     # starbest is totally unreliable
     # /v/religious-retreat/109207355 has a 1.0 rating = 'bomb'
     
     star_rating = {}
-    
     if soup.find(id="starSummaryText") != None:
         meta = soup.find(id="starSummaryText").find_all('meta')
         for m in meta:
@@ -139,14 +170,16 @@ def get_star_rating(soup):
             
         return star_rating
 
+
 def get_grade(soup):
+    """ Find consensus grade of this climb
+    return dictionary with grade in multiple rating systems """
 
     # up there with with route name
     grade_table = soup.h3
 
     # look for grades in spans
     grade = []
-
     for s in grade_table.find_all('span'):
 
         # class names are the grading systems
@@ -160,17 +193,20 @@ def get_grade(soup):
 
             grade.append(body)
 
-    
     # extract tbe grades
     grade_data = {}
     for g in grade:
-        h = g.split(':\xc2\xa0')
+        h = g.split(SPLIT_CHAR)
         if len(h) > 1:
             grade_data['rate'+h[0].strip()] = h[1]
 
     return grade_data
 
+
 def get_type(cmb_type):
+    """ Get info about the type of climb, including pitches, feet, commitment rating
+    Called from Scraper if is_route
+    """
 
     kind_pitches_feet = str(cmb_type).split(', ')
 
@@ -178,6 +214,7 @@ def get_type(cmb_type):
     for morsel in kind_pitches_feet:
         terminology = ['Boulder','Trad','Sport','TR','Aid','Ice','Mixed','Alpine','Chipped']
         if morsel in terminology:
+            # columns end up either True or NaN
             kind[morsel.lower()] = True
         elif pitchRE.search(morsel):
             kind['pitches'] = morsel.split(' ')[0]
@@ -188,8 +225,8 @@ def get_type(cmb_type):
     return kind
 
 def get_general(soup):
+    """ Call soup helper functions and return dictionary with all features """
     
-    # call soup helper functions
     general_info = {}
     general_info.update(get_route_name(soup))
     general_info.update(get_box_data(soup))

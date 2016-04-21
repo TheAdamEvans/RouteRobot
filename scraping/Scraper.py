@@ -13,9 +13,8 @@ class Scraper(object):
 
     def __init__(self, href):
         self.href = href
-
         try:
-            mp_page = urlopen('http://www.mountainproject.com' + href)
+            mp_page = urlopen('http://www.mountainproject.com/v/' + href)
         except:
             print href + ' failed to LOAD!'
             self.soup = None
@@ -36,12 +35,15 @@ class Scraper(object):
                 if dest.a != None: # sometimes <a> is within a <span>
                     dest = dest.a
                 h = dest.get('href')
-                h = h.encode('utf-8', errors = 'ignore') # encoding is crucial
+                h = h.encode('utf-8', errors = 'ignore')
                 href.append(h)
         
         # only routes and areas have an href containing /v/
         href = [h for h in href if '/v/' in h]
-        
+        # use the digits at the end of the href as index
+        # links like .../v/108452874 work just fine
+        href = [sr.find_id(h) for h in href]
+
         return href
 
     def get_children(self):
@@ -53,13 +55,10 @@ class Scraper(object):
         if root: # at /v/ or /destinations/
             # get tags for the 50 states and International
             dest_iter = self.soup.find_all('span', { 'class': "destArea" })
-
             # pull out href key
             children = self.get_child_href(dest_iter)
-
             return children
         else:
-            
             is_route = re.search('You & This Route',youContainer.get_text()) != None
             is_area = re.search('You & This Area',youContainer.get_text()) != None
 
