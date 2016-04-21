@@ -1,6 +1,11 @@
 library(sqldf)
+
+my.pwd = '~/RouteRobot/cluster/'
+
+# copied data here after running /scraping/driver.py
 d <- read.csv("~/RouteRobot/cluster/climb.csv", row.names=1, stringsAsFactors=FALSE)
 
+# good analysis starts with a good schema
 climb = data.frame(
   href = as.character(d$href),
   nickname = as.character(d$nickname),
@@ -35,48 +40,6 @@ climb = data.frame(
   fa = as.character(d$fa)
 )
 
-
-plot_YDS_histogram <- function(climb){
-  # filter to only routes
-  climb = climb[climb$is_route,]
-  
-  # most climbs are between 5.5 and 5.14
-  grade_breaks = seq(5, 14.5, by = 0.5)
-  # magic number math to make pretty labels
-  grd = rep(4:13, each = 2)
-  adj = rep(c('','+'), 10)
-  grade_labels = paste0('5.',grd, adj)
-  names(grade_breaks) = grade_labels
-  
-  # compare YDS rate to pretty grades and return name of closest one
-  climb$clean_label = unlist(lapply(
-    climb$rateFloatYDSRound, function(g) {
-      label = grade_labels[which.min(abs(grade_breaks - g))]
-      if (length(label) > 0) {
-       return(label) 
-      } else { return("") }
-    }
-  ))
-  
-  # count how many climbs fall into each grade
-  grade_histo = sqldf("
-  select
-    clean_label,
-    count(distinct href) num_climbs,
-    avg(rateFloatYDS) hard
-  from climb
-  where rateYDS not in ('')
-  group by clean_label
-  order by hard
-        ")
-  # classic reorder for bar plot
-  grade_histo$clean_label = reorder(grade_histo$clean_label, grade_histo$hard)
-  
-  # plot count frequency versus difficulty
-  plt = ggplot(data=grade_histo)
-  plt = plt + geom_bar(stat='identity', aes(x = clean_label, y = num_climbs)) +
-  plt = plt + labs(title="Climbs are Most Often 5.10")
-  plt = plt + labs(x="Difficulty", y="Number of Climbs")
-  
-  return(plt)
-}
+source(paste0(my.pwd,'viz.R'))
+print(YDS_histogram(climb))
+print(Hueco_histogram(climb))
