@@ -1,5 +1,43 @@
 library(ggplot2)
 
+trend_scatter <- function(climb, x_string, y_string, limits = c(), log_scale = FALSE) {
+  # consider marginal plots here??
+  vote_thresh = 3
+  
+  # throw out NA records
+  climb = climb[!is.na(climb$max_type),]
+  
+  # jitter heaped values
+  climb[[y_string]] = jitter(climb[[y_string]])
+  climb[[x_string]] = jitter(climb[[x_string]])
+  
+  # filter to reasonable lengths
+  if(length(limits) > 0) {
+    within_limits = climb[[x_string]]>limits[1] & climb[[x_string]]<limits[2]
+    climb = climb[within_limits,]
+  }
+  
+  # only consider respectable vote counts
+  climb = climb[climb$starvotes>vote_thresh,]
+  
+  # plot
+  plt = ggplot(data=climb, aes_string(
+    x = x_string, y = y_string,
+    colour = 'max_type'
+  ), size = 1)
+  plt = plt + geom_point(alpha = 0.5)
+  # guide legend = 'None'
+  # log scale if you're into that
+  if(log_scale) { plt = plt + scale_x_log10() }
+  # add trend lines
+  plt = plt + stat_smooth(method = 'lm', se = FALSE)
+  
+  # plt = plt + labs(title="Taller, Harder Climbs Tend to Be Rated Higher")
+  plt = plt + labs(x=x_string, y=y_string)
+  
+  return(plt)
+}
+
 YDS_histogram <- function(climb){
   # filter to only routes
   climb = climb[climb$rateYDS != '',]
@@ -81,45 +119,7 @@ Hueco_histogram <- function(climb){
   return(plt)
 }
 
-trend_scatter <- function(climb, x_string, y_string, limits = c(), log_scale = FALSE) {
-  # consider marginal plots here??
-  vote_thresh = 3
-  
-  # throw out NA records
-  climb = climb[!is.na(climb$max_type),]
-  
-  # jitter heaped values
-  climb[[y_string]] = jitter(climb[[y_string]])
-  climb[[x_string]] = jitter(climb[[x_string]])
-  
-  # filter to reasonable lengths
-  if(length(limits) > 0) {
-    within_limits = climb[[x_string]]>limits[1] & climb[[x_string]]<limits[2]
-    climb = climb[within_limits,]
-  }
-  
-  # only consider respectable vote counts
-  climb = climb[climb$starvotes>vote_thresh,]
-  
-  # plot
-  plt = ggplot(data=climb, aes_string(
-    x = x_string, y = y_string,
-    colour = 'max_type'
-    ), size = 1)
-  plt = plt + geom_point(alpha = 0.5)
-  # guide legend = 'None'
-  # log scale if you're into that
-  if(log_scale) { plt = plt + scale_x_log10() }
-  # add trend lines
-  plt = plt + stat_smooth(method = 'lm', se = FALSE)
-  
-  # plt = plt + labs(title="Taller, Harder Climbs Tend to Be Rated Higher")
-  plt = plt + labs(x=x_string, y=y_string)
-  
-  return(plt)
-}
-
-first_ascent_timeline < function(climb) {
+first_ascent_timeline <- function(climb) {
   fa = sqldf(paste("
     select fa_date, count(distinct href) num_ascent
     from climb

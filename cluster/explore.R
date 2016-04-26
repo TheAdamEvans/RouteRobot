@@ -85,6 +85,7 @@ climb$fa_date = sapply(as.character(climb$fa), get_fa_date)
 
 
 source(paste0(my.pwd,'viz.R'))
+print(first_ascent_timeline(climb))
 print(YDS_histogram(climb))
 print(Hueco_histogram(climb))
 print(trend_scatter(
