@@ -113,9 +113,25 @@ trend_scatter <- function(climb, x_string, y_string, limits = c(), log_scale = F
   # add trend lines
   plt = plt + stat_smooth(method = 'lm', se = FALSE)
   
-  # title and axes labels
-  plt = plt + labs(title="Taller Climbs Tend to Be Rated Higher")
+  # plt = plt + labs(title="Taller, Harder Climbs Tend to Be Rated Higher")
   plt = plt + labs(x=x_string, y=y_string)
   
+  return(plt)
+}
+
+first_ascent_timeline < function(climb) {
+  fa = sqldf(paste("
+    select fa_date, count(distinct href) num_ascent
+    from climb
+    where fa_date != ''
+    and fa_date >= 1940
+    group by fa_date
+    order by fa_date
+                   "))
+  plt = ggplot(data=fa, aes_string(x = 'fa_date', y = 'num_ascent'))
+  plt = plt + geom_line(lwd=0.5, linetype = 2)
+  plt = plt + geom_smooth(se = FALSE)
+  plt = plt + labs(title="Rock Climbing Has Gained Popularity Over Time")
+  plt = plt + labs(x="First Ascent Date", y="Number of Climbs")
   return(plt)
 }
