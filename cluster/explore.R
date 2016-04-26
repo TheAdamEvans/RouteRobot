@@ -22,6 +22,20 @@ get_max_type <- function(climb) {
   max_type[max_type=="-Inf"] <- NA
   return(max_type)
 }
+get_fa_date <- function(fa_string) {
+  
+  match = gregexpr('[0-9][0-9][0-9][0-9]', fa_string, perl = TRUE)[[1]]
+  start_position = match[[1]]
+  if(!is.na(start_position) && start_position > -1) {
+    gofor = attr(match, 'match.length')
+    year_digits = substr(fa_string, start_position, start_position+gofor)
+    # year = as.Date(year_digits, format = '%Y')
+    year = as.integer(year_digits)
+    return(year)
+  } else {
+    return(NA)
+  }
+}
 
 my.pwd = '~/RouteRobot/cluster/'
 
@@ -66,9 +80,17 @@ climb = data.frame(
 # shitty code to get an approximate grouping
 climb$max_type = get_max_type(climb)
 
+# more bad code to grab first ascent year
+climb$fa_date = sapply(as.character(climb$fa), get_fa_date)
+
+
 source(paste0(my.pwd,'viz.R'))
 print(YDS_histogram(climb))
 print(Hueco_histogram(climb))
+print(trend_scatter(
+  climb, x_string = 'page_views', y_string = 'staraverage',
+  log_scale = TRUE
+))
 print(trend_scatter(
   climb, x_string = 'feet', y_string = 'staraverage',
   log_scale = TRUE, limits = c(5,2000)
@@ -76,4 +98,3 @@ print(trend_scatter(
 print(trend_scatter(
   climb, x_string = 'grade', y_string = 'staraverage'
 ))
-
