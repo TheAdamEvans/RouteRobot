@@ -1,4 +1,5 @@
 import itertools
+import numpy as np
 import pandas as pd
 from statsmodels.distributions.empirical_distribution import ECDF
 from sklearn.metrics.pairwise import cosine_similarity
@@ -43,7 +44,7 @@ def create_scorer(col, feature):
         
         return casted, scaled, scorer
     
-    elif col in ['feet', 'pitches', 'gradeComb']:
+    elif col in ['feet', 'pitches', 'grade']:
         
         casted = feature.astype(float)
         scaled = scale01(casted)
@@ -63,23 +64,18 @@ def create_scorer(col, feature):
         
         return casted, scaled, scorer
     
-    elif col in ['combined_text']:
+    elif col in ['description']:
+
+        # feature = feature.replace(np.nan,' ', regex=True)
         
         # lemmatize, tokenize, vectorize text
         tfidf = TfidfVectorizer(
-            decode_error='ignore', stop_words='english',
-            # max_df = 0.5,
-            sublinear_tf=True, ngram_range=(1, 2))
+            min_df=0.01, max_df=0.1, stop_words = 'english',
+            strip_accents = 'unicode', lowercase=True, ngram_range=(1,2),
+            norm='l2', sublinear_tf=True
+            )
         text_segments = feature.tolist()
         casted = tfidf.fit_transform(text_segments)
-        # feature_names = tfidf.get_feature_names()
-        # dense = casted.todense()
-        # episode = dense[0].tolist()[0]
-        # def keywords(episode):
-            # phrase_scores = [pair for pair in zip(range(0, len(episode)), episode) if pair[1] > 0]
-            # sorted_phrase_scores = sorted(phrase_scores, key=lambda t: t[1] * -1)
-            # for phrase, score in [(feature_names[word_id], score) for (word_id, score) in sorted_phrase_scores][:5]:
-               # print phrase
 
         # reduce dimensionality
         svd = TruncatedSVD(
@@ -89,6 +85,7 @@ def create_scorer(col, feature):
 
         def scorer(scaled, ideal):
             sim = cosine_similarity(ideal, scaled)
+            print sim.shape
             sim_score = pd.Series(sim[0], index=feature.index)
             return sim_score.tolist()
         
@@ -100,9 +97,6 @@ def create_scorer(col, feature):
 
 def create_recommendation_system(climb):
     """ Appropriately fit models to all climbs """
-
-    # isolate the description we care about
-    climb['combined_text'] = climb['description'].astype(str) + climb['other_text'].astype(str)
 
     # iterate over columns and fit various representations
     FIT = {}
@@ -136,8 +130,8 @@ def give_recommendation(FIT, href, top):
     
     # multiply weights
     # magic numbers because obviously
-    rec['combined_text'] = rec['combined_text'] * 35
-    rec['gradeComb'] = rec['gradeComb'] * 12
+    rec['description'] = rec['description'] * 35
+    rec['grade'] = rec['grade'] * 12
     rec['feet'] = rec['feet'] * 10
     rec['pitches'] = rec['pitches'] * 3
     rec['staraverage'] = rec['staraverage'] * 15
