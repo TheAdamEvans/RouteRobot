@@ -10,16 +10,19 @@ def traverse(node):
     for href in node.children_href:
         # initialize Scraper for this page
         scrap = Scraper(href)
-        # grab features from the soup
-        dest = scrap.create_destination()
-        # find children in the soup if any
-        dest.children_href = scrap.get_children()
-        # recursively deeper down the tree if this is an area
-        if dest.children_href != None:
-            traverse(dest)
-        # inner traverse function has returned with destination object
-        print dest.nickname + ' | ' + dest.href
-        children.append(dest)
+        if not scrap.soup:
+            pass
+        else:
+            # grab features from the soup
+            dest = scrap.create_destination()
+            # find children in the soup if any
+            dest.children_href = scrap.get_children()
+            # recursively deeper down the tree if this is an area
+            if dest.children_href != None:
+                traverse(dest)
+            # inner traverse function has returned with destination object
+            print dest.nickname + ' | ' + dest.href
+            children.append(dest)
 
     node.children = children
     return node

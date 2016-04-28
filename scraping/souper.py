@@ -1,14 +1,14 @@
-import urllib2
 import re
 from bs4 import NavigableString
 
 SPLIT_CHAR = ':\xc2\xa0'
 idRE = re.compile(r'(\d+)$')
-GPSre = re.compile(r'(\-?\d+(\.\d+)?),\s*(\-?\d+(\.\d+)?)')
+gpsRE = re.compile(r'(\-?\d+(\.\d+)?),\s*(\-?\d+(\.\d+)?)')
 pitchRE = re.compile(r'^(\d)+ pitch')
 feetRE = re.compile(r'^(\d)+\'')
 commitmentRE = re.compile(r'Grade [VI]+')
-firstnbspRE = re.compile(r'\xc2\xa0')
+nbspRE = re.compile(r'\xc2\xa0')
+yearRE = re.compile(r'[0-9][0-9][0-9][0-9]')
 
 
 def find_id(href):
@@ -25,8 +25,8 @@ def get_route_name(soup):
     route_name = route_soup.getText()
     route_name = route_name.encode('utf-8' ,errors = 'ignore')
 
-    # get rid of break and anything after like Rock Climbing
-    NBSP = firstnbspRE.search(route_name)
+    # get rid of \xc2\xa0Rock Climbing
+    NBSP = nbspRE.search(route_name)
     if NBSP:
         route_name = route_name[:NBSP.start()]
     route_name = route_name.strip()
@@ -62,15 +62,25 @@ def get_box_data(soup):
             head = i[0].strip().replace(' ','_').lower()
             body = i[1].strip()
 
-            # Location body has junk in it like "\xc2\xa0Incorrect?"
-            GPSmatch = GPSre.search(body)
-            if GPSmatch is not None:
-                body = GPSmatch.group(0)
-
             # easier to cast as int later
-            if head == 'page_views':
+            if head in ['page_views','elevation']:
                 body = body.replace(',','')
 
+            # only return submitted year if there is one
+            if head in ['fa','submitted_by']:
+                yearMatch = yearRE.search(body)
+                if yearMatch:
+                    body = int(yearMatch.group(0))
+
+            # isolate GPS coordinate string
+            if head == 'location':
+                head = 'gps_coord'
+                GPSmatch = gpsRE.search(body)
+                if GPSmatch is None:
+                    body = float('NaN')
+                else:
+                    body = GPSmatch.group(0)
+                    
             # store data in dict
             box_data[head] = body
 
@@ -84,15 +94,13 @@ def get_protect_rate(soup):
     # up there with with route name
     grade_table = soup.h3
     
-    # finds ratings 
     # destroys the grade spans and looks for text
     while grade_table.span != None:
         grade_table.span.decompose()
     protect_rate = grade_table.getText()
     protect_rate = protect_rate.encode('utf8', errors = 'ignore').strip()
     
-    if protect_rate != "":
-        return { 'protect_rate': protect_rate }
+    return { 'protect_rate': protect_rate }
 
 
 def get_area_hierarchy(soup):
@@ -144,14 +152,17 @@ def get_description(soup):
             else:
                 other_text.append(body)
 
+    # combine text into a full description
     if len(other_text) > 0:
-        detail['other_text'] = '\n'.join(other_text)
         if 'description' in detail:
             # combine description with other text -- questionable but appropriate
-            detail['description'] = detail['description'] + detail['other_text']
+            detail['description'] = detail['description'] + '\n'.join(other_text)
         else:
-            detail['description'] = detail['other_text']
-            del detail['other_text']
+            detail['description'] = '\n'.join(other_text)
+
+    # blank if there is no text at all
+    if 'description' not in detail:
+        detail['description'] = ''
 
     return detail
 
@@ -212,11 +223,11 @@ def get_type(cmb_type):
     Called from Scraper if is_route
     """
 
-    kind_pitches_feet = str(cmb_type).split(', ')
+    terminology = ['Boulder','Trad','Sport','TR','Aid','Ice','Mixed','Alpine','Chipped']
 
     kind = {}
+    kind_pitches_feet = str(cmb_type).split(', ')
     for morsel in kind_pitches_feet:
-        terminology = ['Boulder','Trad','Sport','TR','Aid','Ice','Mixed','Alpine','Chipped']
         if morsel in terminology:
             # columns end up either True or NaN
             kind[morsel.lower()] = True
@@ -227,6 +238,7 @@ def get_type(cmb_type):
         elif commitmentRE.search(morsel):
             kind['commitment'] = morsel.split(' ')[-1]
     return kind
+
 
 def get_general(soup):
     """ Call soup helper functions and return dictionary with all features """
