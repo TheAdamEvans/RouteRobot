@@ -8,11 +8,28 @@ from destination import Destination
 from statsmodels.distributions.empirical_distribution import ECDF
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-def parse_lat_long(coord):
+
+def parse_lat_long(coord):  
     if pd.isnull(coord):
         return float('NaN'), float('NaN')
     else:
         return tuple(coord.split(', '))
+
+
+def sanitize(dirty_query, vocab):
+    """ Transform query string into vocab tokens """
+    query = dirty_query.strip().lower()
+    unigrams = query.split(' ')
+    bigrams = [ b[0]+' '+b[1] for l in [query] for b in zip(l.split(' ')[:-1], l.split(' ')[1:]) ]
+    tokens = [ t for t in (unigrams + bigrams) if t in vocab ]
+    return tokens
+
+
+def get_keyword(tokens, MAX_KEYWORD=20):
+    # pick out and join keywords into a single string
+    MAX_KEYWORD = min(len(tokens),MAX_KEYWORD)
+    keyword = '  '.join(tokens[:MAX_KEYWORD])
+    return keyword
 
 
 def scale01(feature):
@@ -23,7 +40,6 @@ def scale01(feature):
     # scale values
     qtile = ecdf(feature)
     scaled_feature = pd.Series(qtile, index=feature.index)
-    
     # convert NaN from 1.0 back to NaN
     scaled_feature[pd.isnull(feature)] = float('NaN')
     
@@ -71,43 +87,46 @@ def combine_pickle(DATA_DIR):
     return climb
 
 
-def get_keyword(text_feature, vocab, MAX_KEYWORD=20):
-    """ Creates a single keyword string for each climb """
+def get_climb_type(cmb, ordered_bool_col):
+    """ Break ties for many multlple-types climbs """
+    type_of_climb = cmb[ordered_bool_col]
+    if sum(type_of_climb) == 0:
+        typ = float('NaN')
+    else:
+        for typ, is_typ in type_of_climb.iteritems():
+            if is_typ:
+                break
+    return typ
 
-    # lemmatize, tokenize, vectorize text
-    tfidf = TfidfVectorizer(
-        vocabulary = vocab,
-        #min_df=0.01, max_df=0.2, stop_words = 'english', ngram_range=(1,2),
-        strip_accents = 'unicode', lowercase=True, 
-        norm='l2', smooth_idf=True, sublinear_tf=True, use_idf=True
-        )
-    text_segments = text_feature.tolist()
-    tfidf_matrix = tfidf.fit_transform(text_segments)
-    feature_names = tfidf.get_feature_names()
 
-    # can be very large
-    dense = tfidf_matrix.todense()
-    
-    description_keyword = []
-    for i in range(dense.shape[0]):
+def get_parent_datum(climb, col, depth=-2):
+    """ Lookup information from areas with specified depth
+    Parents have depth -2 because self.href is last
+    """
+    collect = []
+    for cmb in climb['href']:
+        parent_href = climb.loc[cmb]['hierarchy']
+        if len(parent_href) == 0:
+            pdatum = float('NaN')
+        else:
+            pdatum = climb.loc[parent_href][col][depth]
+        collect.append(pdatum)
+    return pd.Series(collect, index=climb.index)
 
-        # get description for this climb
-        desc = dense[i].tolist()[0]
-        phrase_scores = [pair for pair in zip(range(0, len(desc)), desc) if pair[1] > 0]
-        sorted_phrase_scores = sorted(phrase_scores, key=lambda t: t[1] * -1)
-        
-        # lookup feature name
-        keyword = []
-        for phrase, score in [(feature_names[word_id], score) for (word_id, score) in sorted_phrase_scores]:
-            keyword.append(phrase)
 
-        # pick out and join keywords into a single string
-        MAX_KEYWORD = min(len(keyword),MAX_KEYWORD)
-        keyword_summary = '  '.join(keyword[:MAX_KEYWORD])
-        description_keyword.append(keyword_summary)
-    
-    keyword = pd.Series(description_keyword, index=text_feature.index)
-    return keyword      
+def get_coord(hierarchy, climb):
+    """ Recursively seeks a non null gps coordinate from the hierarchy """
+    coord = climb.loc[hierarchy[-1]]['gps_coord']
+    if isinstance(coord, str):
+        return coord
+    else:
+        hierarchy = hierarchy[:-1]
+        if len(hierarchy) == 0:
+            return float('NaN')
+        else:
+            coord = get_coord(hierarchy, climb)
+            return coord
+
 
 def cast_all_pickles(DATA_DIR):
     """ Read in directory of pickles and return workable DataFrame """
@@ -118,41 +137,65 @@ def cast_all_pickles(DATA_DIR):
     vocab = pd.read_csv('bigram_vocab.txt', header=None)[0].tolist()
     climb['keyword'] = get_keyword(climb['description'], vocab)
 
-    # TODO: plit these out into other functions
+    # grab vocab words from the description
+    climb['tokens'] = map(lambda c: sanitize(c,vocab), climb['description'])
+    climb['keyword'] = map(lambda t: get_keyword(t), climb['tokens'])
+
     # split GPS coordinates into lat long columns
     prsd = map(parse_lat_long, climb['gps_coord'].values)
     lat_long = pd.DataFrame.from_records(prsd, columns = [['latitude','longitude']], index = climb.index)
     climb = pd.concat([climb,lat_long], axis=1)
 
-    # get rid of lists inside cells
-    climb['tree_depth'] = map(len, climb['area_hierarchy'])
-    climb['state'] = map(lambda a: a[0], climb['area_hierarchy'])
-    climb['area'] = map(lambda a: a[-1], climb['area_hierarchy'])
-    # TODO join climb to itself on state + area to get names
-
-    climb['num_children'] = map(lambda c: len(c) if isinstance(c,list) else 0, climb['children_href'])
-    climb = climb.drop(['area_hierarchy','children_href'], axis=1)
-    
     # cast columns appropriately
-    numeric_col = ['page_views','elevation','pitches','feet','staraverage','starbest','starvotes','latitude','longitude']
-    for col in numeric_col:
+    num_col = [
+        'page_views','elevation','pitches','feet',
+        'staraverage','starbest','starvotes','latitude','longitude'
+        ]
+    for col in num_col:
         if col in climb.columns:
             climb[col] = pd.to_numeric(climb[col], errors='coerce')
-
-    boolean_col = ['aid','alpine','boulder','sport','trad','ice','mixed','tr','chipped']
-    for col in boolean_col:
+    bool_col = [
+        'mixed','ice','tr','boulder','aid','trad','sport','alpine','chipped'
+        ]
+    for col in bool_col:
         if col in climb.columns:
             climb[col] = pd.notnull(climb[col])
+
+    # for climbs with multiple types pick one
+    climb['single_climb_type'] = climb.apply(get_climb_type, axis=1, args=(bool_col,))
+
+    # what state is this climb in
+    climb['state_name'] = get_parent_datum(climb, 'name', depth=0)
+
+    # grab info from immediate parents
+    climb['parent_keyword'] = get_parent_datum(climb, 'keyword')
+    climb['parent_tokens'] = get_parent_datum(climb, 'tokens')
+    climb['parent_keyword'] = get_parent_datum(climb, 'keyword')
+    climb['parent_name'] = get_parent_datum(climb, 'name')
+    climb['total_token'] = climb['parent_tokens'] + climb['tokens']
+    climb['parent_gps_coord'] = get_parent_datum(climb, 'gps_coord')
+
+    # find best gps coords available
+    climb['gps_coord_inferred'] = map(lambda h: get_coord(h, climb), climb['hierarchy'])
+
+    # quick counts for posterity
+    climb['tree_depth'] = map(len, climb['hierarchy'])
+    climb['num_children'] = map(lambda c: len(c) if isinstance(c,list) else 0, climb['children_href'])
+
+    # get rid of lists inside dataframe
+    climb = climb.drop(['hierarchy','children_href'], axis=1)
+    
+    # scale important numeric columns (to make scoring easy later)
+    climb['scaledFeet'] = scale01(climb['feet'])
+    climb['scaledPitches'] = scale01(climb['pitches'])
 
     # combine YDS and Hueco grades
     # allows empirical comparison of Bouldering and Sport/Trad routes
     climb['rateFloatHueco'] = map(cl.convert_hueco, climb['rateHueco'])
     climb['ratePCTHueco'] = scale01(climb['rateFloatHueco'])
-    # climb['rateFloatYDS'] = map(cl.convert_hueco, climb['rateYDS'])
-    # climb['ratePCTYDS'] = scale01(climb['rateFloatYDS'])
-    
+    climb['rateFloatYDS'] = map(cl.convert_hueco, climb['rateYDS'])
+    climb['ratePCTYDS'] = scale01(climb['rateFloatYDS'])
     # not many conflicting cases -- max is reasonable assuption
-    #climb['grade'] = climb[['ratePCTHueco','ratePCTYDS']].max(axis='columns')
-    climb['grade'] = climb['ratePCTHueco']
+    climb['grade'] = climb[['ratePCTHueco','ratePCTYDS']].max(axis='columns')
 
     return climb

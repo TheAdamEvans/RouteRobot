@@ -89,6 +89,8 @@ class Scraper(object):
             # grab features from html
             feature = sr.get_general(self.soup)
             dest = Destination(self.href, feature)
+            # add self href to make recursing easy later
+            dest.hierarchy = dest.hierarchy + [self.href]
             dest.is_area = is_area
             dest.is_route = is_route
 

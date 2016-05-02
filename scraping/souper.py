@@ -166,7 +166,7 @@ def get_protect_rate(soup):
     return { 'protect_rate': protect_rate }
 
 
-def get_area_hierarchy(soup):
+def get_hierarchy(soup):
     """ Returns list of parents all the way to the root """
 
     navboxdiv = soup.find(id="navBox").div
@@ -180,7 +180,7 @@ def get_area_hierarchy(soup):
         parent.append(p)
 
     # omit root from the hierarchy
-    return { 'area_hierarchy': parent[1:] }
+    return { 'hierarchy': parent[1:] }
 
 
 def get_star_rating(soup):
@@ -263,7 +263,7 @@ def get_general(soup):
     general_info.update(get_route_name(soup))
     general_info.update(get_box_data(soup))
     general_info.update(get_description(soup))
-    general_info.update(get_area_hierarchy(soup))
+    general_info.update(get_hierarchy(soup))
     general_info.update(get_first_img_source(soup))
 
     return general_info

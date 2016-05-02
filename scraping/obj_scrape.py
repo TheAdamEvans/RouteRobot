@@ -19,6 +19,8 @@ def traverse(node):
             dest.children_href = scrap.get_children()
             # recursively deeper down the tree if this is an area
             if dest.children_href != None:
+                print
+                print '**'+dest.nickname+'**'
                 traverse(dest)
             # inner traverse function has returned with destination object
             print dest.nickname + ' | ' + dest.href
@@ -33,7 +35,6 @@ def save_info_from(href, data_dir):
     scrap = Scraper(href)
     dest = scrap.create_destination()
     dest.children_href = scrap.get_children()
-    print '**'+dest.nickname+'**'
 
     # check if we have already crawled this area
     OBJECT_OUTFILE = data_dir + dest.nickname + '.pickle'
@@ -67,7 +68,6 @@ def save_info_from(href, data_dir):
 def scrape_all(root_href, data_dir):
     """ Scrape Mountain Project and save Destination objects """
     
-    # save info from this href
     scrap = Scraper(root_href)
 
     # iterate over children of the root (e.g. states in the US)
