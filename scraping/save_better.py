@@ -99,17 +99,17 @@ def get_climb_type(cmb, ordered_bool_col):
     return typ
 
 
-def get_parent_datum(climb, col, depth=-2):
+def get_parent_datum(climb, col, depth=2):
     """ Lookup information from areas with specified depth
     Parents have depth -2 because self.href is last
     """
     collect = []
     for cmb in climb['href']:
         parent_href = climb.loc[cmb]['hierarchy']
-        if len(parent_href) == 0:
+        if len(parent_href) < depth:
             pdatum = float('NaN')
         else:
-            pdatum = climb.loc[parent_href][col][depth]
+            pdatum = climb.loc[parent_href][col][-depth]
         collect.append(pdatum)
     return pd.Series(collect, index=climb.index)
 
@@ -134,10 +134,10 @@ def cast_all_pickles(DATA_DIR):
     # read in data from directory of pickles
     climb = combine_pickle(DATA_DIR)
 
-    vocab = pd.read_csv('bigram_vocab.txt', header=None)[0].tolist()
-    climb['keyword'] = get_keyword(climb['description'], vocab)
 
     # grab vocab words from the description
+    vocab = pd.read_csv('bigram_vocab.txt', header=None)[0].tolist()
+    climb['keyword'] = get_keyword(climb['description'], vocab)
     climb['tokens'] = map(lambda c: sanitize(c,vocab), climb['description'])
     climb['keyword'] = map(lambda t: get_keyword(t), climb['tokens'])
 
@@ -145,6 +145,7 @@ def cast_all_pickles(DATA_DIR):
     prsd = map(parse_lat_long, climb['gps_coord'].values)
     lat_long = pd.DataFrame.from_records(prsd, columns = [['latitude','longitude']], index = climb.index)
     climb = pd.concat([climb,lat_long], axis=1)
+
 
     # cast columns appropriately
     num_col = [
@@ -161,6 +162,12 @@ def cast_all_pickles(DATA_DIR):
         if col in climb.columns:
             climb[col] = pd.notnull(climb[col])
 
+
+    # leverage then delete area_hierarchy
+    # quick counts for posterity
+    climb['tree_depth'] = map(len, climb['hierarchy'])
+    climb['num_children'] = map(lambda c: len(c) if isinstance(c,list) else 0, climb['children_href'])
+
     # for climbs with multiple types pick one
     climb['single_climb_type'] = climb.apply(get_climb_type, axis=1, args=(bool_col,))
 
@@ -168,7 +175,6 @@ def cast_all_pickles(DATA_DIR):
     climb['state_name'] = get_parent_datum(climb, 'name', depth=0)
 
     # grab info from immediate parents
-    climb['parent_keyword'] = get_parent_datum(climb, 'keyword')
     climb['parent_tokens'] = get_parent_datum(climb, 'tokens')
     climb['parent_keyword'] = get_parent_datum(climb, 'keyword')
     climb['parent_name'] = get_parent_datum(climb, 'name')
@@ -178,23 +184,23 @@ def cast_all_pickles(DATA_DIR):
     # find best gps coords available
     climb['gps_coord_inferred'] = map(lambda h: get_coord(h, climb), climb['hierarchy'])
 
-    # quick counts for posterity
-    climb['tree_depth'] = map(len, climb['hierarchy'])
-    climb['num_children'] = map(lambda c: len(c) if isinstance(c,list) else 0, climb['children_href'])
-
     # get rid of lists inside dataframe
     climb = climb.drop(['hierarchy','children_href'], axis=1)
     
-    # scale important numeric columns (to make scoring easy later)
+
+    ## scale columns on [0,1] to make scoring easier later
     climb['scaledFeet'] = scale01(climb['feet'])
     climb['scaledPitches'] = scale01(climb['pitches'])
 
+
+    # cast grade strings as float
+    climb['rateFloatHueco'] = map(cl.convert_hueco, climb['rateHueco'])
+    climb['rateFloatYDS'] = map(cl.convert_hueco, climb['rateYDS'])
+    climb['ratePCTHueco'] = scale01(climb['rateFloatHueco'])
+    climb['ratePCTYDS'] = scale01(climb['rateFloatYDS'])
+
     # combine YDS and Hueco grades
     # allows empirical comparison of Bouldering and Sport/Trad routes
-    climb['rateFloatHueco'] = map(cl.convert_hueco, climb['rateHueco'])
-    climb['ratePCTHueco'] = scale01(climb['rateFloatHueco'])
-    climb['rateFloatYDS'] = map(cl.convert_hueco, climb['rateYDS'])
-    climb['ratePCTYDS'] = scale01(climb['rateFloatYDS'])
     # not many conflicting cases -- max is reasonable assuption
     climb['grade'] = climb[['ratePCTHueco','ratePCTYDS']].max(axis='columns')
 
