@@ -134,10 +134,9 @@ def cast_all_pickles(DATA_DIR):
     # read in data from directory of pickles
     climb = combine_pickle(DATA_DIR)
 
-
     # grab vocab words from the description
+    print 'Tokenizing...'
     vocab = pd.read_csv('bigram_vocab.txt', header=None)[0].tolist()
-    climb['keyword'] = get_keyword(climb['description'], vocab)
     climb['tokens'] = map(lambda c: sanitize(c,vocab), climb['description'])
     climb['keyword'] = map(lambda t: get_keyword(t), climb['tokens'])
 
@@ -165,6 +164,7 @@ def cast_all_pickles(DATA_DIR):
 
     # leverage then delete area_hierarchy
     # quick counts for posterity
+    print 'Area hierarchy...'
     climb['tree_depth'] = map(len, climb['hierarchy'])
     climb['num_children'] = map(lambda c: len(c) if isinstance(c,list) else 0, climb['children_href'])
 
@@ -182,7 +182,7 @@ def cast_all_pickles(DATA_DIR):
     climb['parent_gps_coord'] = get_parent_datum(climb, 'gps_coord')
 
     # find best gps coords available
-    climb['gps_coord_inferred'] = map(lambda h: get_coord(h, climb), climb['hierarchy'])
+    # climb['gps_coord_inferred'] = map(lambda h: get_coord(h, climb), climb['hierarchy'])
 
     # get rid of lists inside dataframe
     climb = climb.drop(['hierarchy','children_href'], axis=1)
