@@ -39,9 +39,12 @@ def get_tokens(row, vocab):
 
 def get_keyword(tokens, MAX_KEYWORD=20):
     """ pick out and join keywords into a single string """
-    MAX_KEYWORD = min(len(tokens),MAX_KEYWORD)
-    keyword = '  '.join(tokens[:MAX_KEYWORD])
-    return keyword
+    if isinstance(tokens, list):
+        MAX_KEYWORD = min(len(tokens),MAX_KEYWORD)
+        keyword = '  '.join(tokens[:MAX_KEYWORD])
+        return keyword
+    else:
+        return ''
 
 
 def scale01(feature):
@@ -159,6 +162,9 @@ def cast_all_pickles(DATA_DIR):
 
     climb['single_climb_type'] = climb.apply(get_climb_type, axis=1, args=(bool_col,))
 
+    # Flask doesn't like 'name' as a header
+    climb['dest_name'] = climb['name']
+
     # scale columns on [0,1] to make scoring easier later
     climb['scaledFeet'] = scale01(climb['feet'])
     climb['scaledPitches'] = scale01(climb['pitches'])
@@ -193,7 +199,7 @@ def collapse_hierarchy(climb):
     climb['parent_href'] = get_parent_datum(climb, 'href')
     climb['parent_name'] = get_parent_datum(climb, 'name')
     climb['parent_tokens'] = get_parent_datum(climb, 'tokens')
-    climb['parent_keyword'] = get_keyword(climb, 'parent_tokens')
+    climb['parent_keyword'] = map(lambda t: get_keyword(t), climb['parent_tokens'])
     
     # parent vector could be useful for recommendations
     climb['parent_sparse_tfidf'] = get_parent_datum(climb, 'sparse_tfidf')
