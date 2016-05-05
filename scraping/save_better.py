@@ -16,17 +16,29 @@ def parse_lat_long(coord):
         return tuple(coord.split(', '))
 
 
-def sanitize(dirty_query, vocab):
-    """ Transform query string into vocab tokens """
-    query = dirty_query.strip().lower()
-    unigrams = query.split(' ')
-    bigrams = [ b[0]+' '+b[1] for l in [query] for b in zip(l.split(' ')[:-1], l.split(' ')[1:]) ]
-    tokens = [ t for t in (unigrams + bigrams) if t in vocab ]
+def get_climb_type(cmb, ordered_bool_col):
+    """ assign a single climb type """
+    type_of_climb = cmb[ordered_bool_col]
+    if sum(type_of_climb) == 0:
+        typ = float('NaN')
+    else:
+        for typ, is_typ in type_of_climb.iteritems():
+            if is_typ:
+                break
+    return typ
+
+
+def get_tokens(row, vocab):
+    """ translates sparse vector into relevancy-ordered tokens"""
+    badsort_tokens = [vocab[loc] for loc in row.nonzero()[1]]
+    badsort_values = [row[0,loc] for loc in row.nonzero()[1]]
+    sorted_tokens = sorted(zip(badsort_values, badsort_tokens), reverse=True)
+    tokens = [t for (v,t) in sorted_tokens]
     return tokens
 
 
 def get_keyword(tokens, MAX_KEYWORD=20):
-    # pick out and join keywords into a single string
+    """ pick out and join keywords into a single string """
     MAX_KEYWORD = min(len(tokens),MAX_KEYWORD)
     keyword = '  '.join(tokens[:MAX_KEYWORD])
     return keyword
@@ -87,18 +99,6 @@ def combine_pickle(DATA_DIR):
     return climb
 
 
-def get_climb_type(cmb, ordered_bool_col):
-    """ Break ties for many multlple-types climbs """
-    type_of_climb = cmb[ordered_bool_col]
-    if sum(type_of_climb) == 0:
-        typ = float('NaN')
-    else:
-        for typ, is_typ in type_of_climb.iteritems():
-            if is_typ:
-                break
-    return typ
-
-
 def get_parent_datum(climb, col, depth=2):
     """ Lookup information from areas with specified depth
     Parents have depth -2 because self.href is last
@@ -114,39 +114,35 @@ def get_parent_datum(climb, col, depth=2):
     return pd.Series(collect, index=climb.index)
 
 
-def get_coord(hierarchy, climb):
-    """ Recursively seeks a non null gps coordinate from the hierarchy """
-    coord = climb.loc[hierarchy[-1]]['gps_coord']
-    if isinstance(coord, str):
+def recurse_datum(hierarchy, datum, climb):
+    """ Recursively seeks a non null column value from the hierarchy """
+    coord = climb.loc[hierarchy[-1]][datum]
+    if isinstance(coord,(str,list,int)):
         return coord
     else:
         hierarchy = hierarchy[:-1]
         if len(hierarchy) == 0:
             return float('NaN')
         else:
-            coord = get_coord(hierarchy, climb)
+            coord = recurse_datum(hierarchy, datum, climb)
             return coord
 
 
 def cast_all_pickles(DATA_DIR):
-    """ Read in directory of pickles and return workable DataFrame """
+    """ From directory of pickles return workable DataFrame """
 
     # read in data from directory of pickles
     climb = combine_pickle(DATA_DIR)
+    climb = climb.sort_index()
 
-    # grab vocab words from the description
-    print 'Tokenizing...'
-    vocab = pd.read_csv('bigram_vocab.txt', header=None)[0].tolist()
-    climb['tokens'] = map(lambda c: sanitize(c,vocab), climb['description'])
-    climb['keyword'] = map(lambda t: get_keyword(t), climb['tokens'])
-
+    # find best gps coords available
+    climb['gps_coord_inferred'] = map(lambda a: recurse_datum(a,'gps_coord',climb), climb['hierarchy'])
     # split GPS coordinates into lat long columns
-    prsd = map(parse_lat_long, climb['gps_coord'].values)
+    prsd = map(parse_lat_long, climb['gps_coord_inferred'].values)
     lat_long = pd.DataFrame.from_records(prsd, columns = [['latitude','longitude']], index = climb.index)
     climb = pd.concat([climb,lat_long], axis=1)
 
-
-    # cast columns appropriately
+    # cast various columns appropriately
     num_col = [
         'page_views','elevation','pitches','feet',
         'staraverage','starbest','starvotes','latitude','longitude'
@@ -155,53 +151,70 @@ def cast_all_pickles(DATA_DIR):
         if col in climb.columns:
             climb[col] = pd.to_numeric(climb[col], errors='coerce')
     bool_col = [
-        'mixed','ice','tr','boulder','aid','trad','sport','alpine','chipped'
+        'mixed','ice','tr','boulder','aid','alpine','trad','sport','chipped'
         ]
     for col in bool_col:
         if col in climb.columns:
             climb[col] = pd.notnull(climb[col])
 
-
-    # leverage then delete area_hierarchy
-    # quick counts for posterity
-    print 'Area hierarchy...'
-    climb['tree_depth'] = map(len, climb['hierarchy'])
-    climb['num_children'] = map(lambda c: len(c) if isinstance(c,list) else 0, climb['children_href'])
-
-    # for climbs with multiple types pick one
     climb['single_climb_type'] = climb.apply(get_climb_type, axis=1, args=(bool_col,))
 
-    # what state is this climb in
-    climb['state_name'] = get_parent_datum(climb, 'name', depth=0)
-
-    # grab info from immediate parents
-    climb['parent_tokens'] = get_parent_datum(climb, 'tokens')
-    climb['parent_keyword'] = get_parent_datum(climb, 'keyword')
-    climb['parent_name'] = get_parent_datum(climb, 'name')
-    climb['total_token'] = climb['parent_tokens'] + climb['tokens']
-    climb['parent_gps_coord'] = get_parent_datum(climb, 'gps_coord')
-
-    # find best gps coords available
-    # climb['gps_coord_inferred'] = map(lambda h: get_coord(h, climb), climb['hierarchy'])
-
-    # get rid of lists inside dataframe
-    climb = climb.drop(['hierarchy','children_href'], axis=1)
-    
-
-    ## scale columns on [0,1] to make scoring easier later
+    # scale columns on [0,1] to make scoring easier later
     climb['scaledFeet'] = scale01(climb['feet'])
     climb['scaledPitches'] = scale01(climb['pitches'])
-
+    climb['scaledStarvotes'] = scale01(climb['starvotes'])
+    climb['scaledStaraverage'] = scale01(climb['staraverage'])
 
     # cast grade strings as float
     climb['rateFloatHueco'] = map(cl.convert_hueco, climb['rateHueco'])
     climb['rateFloatYDS'] = map(cl.convert_hueco, climb['rateYDS'])
     climb['ratePCTHueco'] = scale01(climb['rateFloatHueco'])
     climb['ratePCTYDS'] = scale01(climb['rateFloatYDS'])
-
     # combine YDS and Hueco grades
     # allows empirical comparison of Bouldering and Sport/Trad routes
     # not many conflicting cases -- max is reasonable assuption
     climb['grade'] = climb[['ratePCTHueco','ratePCTYDS']].max(axis='columns')
 
     return climb
+
+
+def collapse_hierarchy(climb):
+    """ Leverage then delete hierarchy, children_href """
+
+    # quick counts for posterity
+    climb['tree_depth'] = map(len, climb['hierarchy'])
+    climb['num_children'] = map(lambda c: len(c) if isinstance(c,list) else 0, climb['children_href'])
+
+    # what state is this climb in
+    climb['state_name'] = get_parent_datum(climb, 'name', depth=0)
+
+    # grab info from immediate parents
+    # bunches of ways to make this faster
+    climb['parent_href'] = get_parent_datum(climb, 'href')
+    climb['parent_name'] = get_parent_datum(climb, 'name')
+    climb['parent_tokens'] = get_parent_datum(climb, 'tokens')
+    climb['parent_keyword'] = get_keyword(climb, 'parent_tokens')
+    
+    # parent vector could be useful for recommendations
+    climb['parent_sparse_tfidf'] = get_parent_datum(climb, 'sparse_tfidf')
+    
+    # TODO collapse children
+    # sum of starvotes, average staraverage, etc.
+
+    return climb
+
+
+def get_sparse_X(text_segments, vocab):
+    """ vocab words from description
+    returns scipy matrix
+    """
+    # lemmatize, tokenize, vectorize text
+    tfidf = TfidfVectorizer(
+        vocabulary=vocab,
+        strip_accents = 'unicode', lowercase=True, ngram_range=(1,2),
+        norm='l2', sublinear_tf=False, smooth_idf=True, use_idf=True
+        )
+    X = tfidf.fit_transform(text_segments)
+    
+    return X
+
