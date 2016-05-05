@@ -10,7 +10,7 @@ VOCAB = 'bigram_vocab.txt'
 SAVE_AS = 'climb'
 SCHEMA = [
     'href','nickname','starvotes','staraverage','is_area','is_route','single_climb_type',
-    'commitment','protect_rate','feet','pitches','fa','elevation','season',
+    'commitment','protect_rate','feet','pitches','elevation','season',
     'latitude','longitude',
     'rateBritish','rateEwbanks','rateFont','rateFrench','rateHueco','rateUIAA','rateYDS','rateZA',
     'mixed','ice','tr','boulder','aid','alpine','trad','sport','chipped',
