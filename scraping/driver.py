@@ -1,13 +1,17 @@
+from shutil import copyfile
 import pickle
 import pandas as pd
 
 import obj_scrape
-import save_better as sb
+
+from save_better import cast_all_pickles
+from text_mining import process_tokens
+from collapse import collapse_hierarchy
 
 ROOT_HREF = ''
 DATA_DIR = './test_data/'
-VOCAB = 'bigram_vocab.txt'
-SAVE_AS = 'climb'
+VOCAB = 'vocab.txt'
+
 SCHEMA = [
     'href','nickname','starvotes','staraverage','is_area','is_route','single_climb_type',
     'commitment','protect_rate','feet','pitches','elevation','season',
@@ -27,24 +31,26 @@ if __name__ == '__main__':
     # obj_scrape.scrape_all(ROOT_HREF, DATA_DIR)
     
     print "Casting..."
-    climb = sb.cast_all_pickles(DATA_DIR)
+    climb = cast_all_pickles(DATA_DIR)
 
     print 'Vectorizing...'
     vocab = pd.read_csv(VOCAB, header=None)[0].tolist()
-    X = sb.get_sparse_X(climb['description'], vocab)
-
-    print 'Processing tokens...'
-    climb['sparse_tfidf'] = [X[i] for i in range(X.shape[0])]
-    climb['tokens'] = map(lambda row: sb.get_tokens(row, vocab), X)
-    climb['keyword'] = map(lambda t: sb.get_keyword(t), climb['tokens'])
+    climb, idf_lookup = process_tokens(climb, vocab)
+    # save IDF for arbitrary text queries later
+    pickle.dump(idf_lookup, open(DATA_DIR + 'idf', 'wb'))
 
     print 'Collapsing hierarchy...'
-    climb = sb.collapse_hierarchy(climb)
+    climb = collapse_hierarchy(climb)
+
+    print 'Mapping grades...'
+    # grade_map = create_grade_map(climb, rating_system = ['rateHueco','rateYDS'])
 
     print "Saving data..."
-    # save entire object as pickle
-    climb.to_pickle(DATA_DIR + '_' + SAVE_AS)
-    print "Wrote _%s to %s" % (SAVE_AS, DATA_DIR)
-    # save only database-friendly columns to csv
-    climb[SCHEMA].to_csv(DATA_DIR + SAVE_AS + '.csv', header=True, index=None)
-    print "Wrote %s.csv to %s" % (SAVE_AS, DATA_DIR)
+    # save entire object
+    climb.to_pickle(DATA_DIR+'_climb')
+    # save database-friendly only columns
+    climb[SCHEMA].to_pickle(DATA_DIR+'climb.pickle')
+    climb[SCHEMA].to_csv(DATA_DIR+'climb.csv', header=True, index=None)
+
+    print 'Copying objects to route-web folder...'
+    copyfile(DATA_DIR+'climb.pickle', '../../route-web/climb.pickle')

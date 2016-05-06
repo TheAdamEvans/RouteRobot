@@ -2,11 +2,11 @@ import os
 import pickle
 import pandas as pd
 
-import grade_cleaner as cl
 from destination import Destination
+from grade_cleaner import convert_string_grade
+from collapse import recurse_datum
 
 from statsmodels.distributions.empirical_distribution import ECDF
-from sklearn.feature_extraction.text import TfidfVectorizer
 
 
 def parse_lat_long(coord):  
@@ -26,25 +26,6 @@ def get_climb_type(cmb, ordered_bool_col):
             if is_typ:
                 break
     return typ
-
-
-def get_tokens(row, vocab):
-    """ translates sparse vector into relevancy-ordered tokens"""
-    badsort_tokens = [vocab[loc] for loc in row.nonzero()[1]]
-    badsort_values = [row[0,loc] for loc in row.nonzero()[1]]
-    sorted_tokens = sorted(zip(badsort_values, badsort_tokens), reverse=True)
-    tokens = [t for (v,t) in sorted_tokens]
-    return tokens
-
-
-def get_keyword(tokens, MAX_KEYWORD=20):
-    """ pick out and join keywords into a single string """
-    if isinstance(tokens, list):
-        MAX_KEYWORD = min(len(tokens),MAX_KEYWORD)
-        keyword = '  '.join(tokens[:MAX_KEYWORD])
-        return keyword
-    else:
-        return ''
 
 
 def scale01(feature):
@@ -101,36 +82,6 @@ def combine_pickle(DATA_DIR):
 
     return climb
 
-
-def get_parent_datum(climb, col, depth=2):
-    """ Lookup information from areas with specified depth
-    Parents have depth -2 because self.href is last
-    """
-    collect = []
-    for cmb in climb['href']:
-        parent_href = climb.loc[cmb]['hierarchy']
-        if len(parent_href) < depth:
-            pdatum = float('NaN')
-        else:
-            pdatum = climb.loc[parent_href][col][-depth]
-        collect.append(pdatum)
-    return pd.Series(collect, index=climb.index)
-
-
-def recurse_datum(hierarchy, datum, climb):
-    """ Recursively seeks a non null column value from the hierarchy """
-    coord = climb.loc[hierarchy[-1]][datum]
-    if isinstance(coord,(str,list,int)):
-        return coord
-    else:
-        hierarchy = hierarchy[:-1]
-        if len(hierarchy) == 0:
-            return float('NaN')
-        else:
-            coord = recurse_datum(hierarchy, datum, climb)
-            return coord
-
-
 def cast_all_pickles(DATA_DIR):
     """ From directory of pickles return workable DataFrame """
 
@@ -172,8 +123,8 @@ def cast_all_pickles(DATA_DIR):
     climb['scaledStaraverage'] = scale01(climb['staraverage'])
 
     # cast grade strings as float
-    climb['rateFloatHueco'] = map(cl.convert_hueco, climb['rateHueco'])
-    climb['rateFloatYDS'] = map(cl.convert_hueco, climb['rateYDS'])
+    climb['rateFloatHueco'] = map(convert_string_grade, climb['rateHueco'])
+    climb['rateFloatYDS'] = map(convert_string_grade, climb['rateYDS'])
     climb['ratePCTHueco'] = scale01(climb['rateFloatHueco'])
     climb['ratePCTYDS'] = scale01(climb['rateFloatYDS'])
     # combine YDS and Hueco grades
@@ -182,45 +133,3 @@ def cast_all_pickles(DATA_DIR):
     climb['grade'] = climb[['ratePCTHueco','ratePCTYDS']].max(axis='columns')
 
     return climb
-
-
-def collapse_hierarchy(climb):
-    """ Leverage then delete hierarchy, children_href """
-
-    # quick counts for posterity
-    climb['tree_depth'] = map(len, climb['hierarchy'])
-    climb['num_children'] = map(lambda c: len(c) if isinstance(c,list) else 0, climb['children_href'])
-
-    # what state is this climb in
-    climb['state_name'] = get_parent_datum(climb, 'name', depth=0)
-
-    # grab info from immediate parents
-    # bunches of ways to make this faster
-    climb['parent_href'] = get_parent_datum(climb, 'href')
-    climb['parent_name'] = get_parent_datum(climb, 'name')
-    climb['parent_tokens'] = get_parent_datum(climb, 'tokens')
-    climb['parent_keyword'] = map(lambda t: get_keyword(t), climb['parent_tokens'])
-    
-    # parent vector could be useful for recommendations
-    climb['parent_sparse_tfidf'] = get_parent_datum(climb, 'sparse_tfidf')
-    
-    # TODO collapse children
-    # sum of starvotes, average staraverage, etc.
-
-    return climb
-
-
-def get_sparse_X(text_segments, vocab):
-    """ vocab words from description
-    returns scipy matrix
-    """
-    # lemmatize, tokenize, vectorize text
-    tfidf = TfidfVectorizer(
-        vocabulary=vocab,
-        strip_accents = 'unicode', lowercase=True, ngram_range=(1,2),
-        norm='l2', sublinear_tf=False, smooth_idf=True, use_idf=True
-        )
-    X = tfidf.fit_transform(text_segments)
-    
-    return X
-
