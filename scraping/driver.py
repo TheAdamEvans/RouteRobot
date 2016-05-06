@@ -5,7 +5,7 @@ import pandas as pd
 import obj_scrape
 from grade_cleaner import create_grade_map
 from save_better import cast_all_pickles
-from text_mining import process_tokens
+from text_mining import process_tokens, combine_matrix
 from collapse import collapse_hierarchy
 
 ROOT_HREF = ''
@@ -43,6 +43,9 @@ if __name__ == '__main__':
     print 'Collapsing hierarchy...'
     climb = collapse_hierarchy(climb)
 
+    print 'Combining route and area descriptions...'
+    climb['combined_sparse_tfidf'] = climb.apply(combine_matrix, axis=1)
+    
     print 'Mapping grades...'
     grade_map = create_grade_map(climb, rating_system = ['rateHueco','rateYDS'])
     pickle.dump(grade_map, open(DATA_DIR+'grade_map', 'wb'))
@@ -51,7 +54,7 @@ if __name__ == '__main__':
     # save entire object
     climb.to_pickle(DATA_DIR+'_climb')
     # slim columns + sparse description information
-    climb[SCHEMA+['sparse_tfidf','parent_sparse_tfidf']].to_pickle(DATA_DIR+'climb')
+    climb[SCHEMA+['sparse_tfidf','parent_sparse_tfidf','combined_sparse_tfidf']].to_pickle(DATA_DIR+'climb')
     # save database-friendly only columns to csv
     climb[SCHEMA].to_csv(DATA_DIR+'climb.csv', header=True, index=None)
 
