@@ -9,7 +9,7 @@ from text_mining import process_tokens, combine_matrix
 from collapse import collapse_hierarchy
 
 ROOT_HREF = ''
-DATA_DIR = './test_data/'
+DATA_DIR = './data/'
 VOCAB = 'vocab.txt'
 
 SCHEMA = [
@@ -22,7 +22,7 @@ SCHEMA = [
     'scaledFeet','scaledPitches','scaledStarvotes','scaledStaraverage',
     'rateFloatHueco','rateFloatYDS','ratePCTHueco','ratePCTYDS','grade',
     'tree_depth','num_children','state_name','parent_href','parent_name','parent_keyword',
-    'name','keyword'
+    'dest_name','keyword'
 ]
 
 if __name__ == '__main__':
