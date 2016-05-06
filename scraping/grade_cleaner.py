@@ -60,7 +60,6 @@ def cast_grade(grd):
             rate = None
         else:
             rate = core_rate
-    
     else:
         rate = None
 
@@ -87,8 +86,14 @@ def adj_from_letter(grade):
     return np.mean(adj)
 
 
-#def map_grades(climb):
-#    grpd = climb.groupby(by=['rateHueco'])
-#    grade = grpd.mean()
-    #
-#    return dict(zip(hueco, grade))
+def create_grade_map(climb, rating_system = ['rateHueco','rateYDS']):
+    """ Create map like { '5.10b': 0.5512... } 
+    Critical for scoring new grade queries without ECDF
+    """
+
+    grade_map = {}
+    for label in rating_system:
+        grpd = climb.groupby(label)['grade'].mean()
+        grade_map.update(dict(zip(grpd.index, grpd.ravel())))
+
+    return grade_map
