@@ -32,9 +32,10 @@ if __name__ == '__main__':
     
     print 'Casting...'
     climb = cast_all_pickles(DATA_DIR)
+    copyfile(VOCAB, DATA_DIR+VOCAB)
 
     print 'Vectorizing...'
-    vocab = pd.read_csv(VOCAB, header=None)[0].tolist()
+    vocab = pd.read_csv(DATA_DIR+VOCAB, header=None)[0].tolist()
     climb, idf_lookup = process_tokens(climb, vocab)
     # save IDF for arbitrary text queries later
     pickle.dump(idf_lookup, open(DATA_DIR+'idf', 'wb'))
@@ -49,10 +50,11 @@ if __name__ == '__main__':
     print 'Saving data...'
     # save entire object
     climb.to_pickle(DATA_DIR+'_climb')
-    # save database-friendly only columns
-    climb[SCHEMA].to_pickle(DATA_DIR+'climb')
+    # slim columns + sparse description information
+    climb[SCHEMA+['sparse_tfidf','parent_sparse_tfidf']].to_pickle(DATA_DIR+'climb')
+    # save database-friendly only columns to csv
     climb[SCHEMA].to_csv(DATA_DIR+'climb.csv', header=True, index=None)
 
-    for web_file in ['idf','grade_map','climb']:
+    for web_file in [VOCAB,'idf','grade_map','climb']:
         print 'Copied to route-web/data/'+web_file
         copyfile(DATA_DIR+web_file, '../../route-web/data/'+web_file)
