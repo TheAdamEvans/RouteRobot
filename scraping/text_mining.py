@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 
+from scipy.linalg import norm
+from scipy.sparse import csr_matrix
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 
@@ -64,3 +66,17 @@ def process_tokens(climb, vocab):
     idf_lookup = calculate_idf_weights(X, vocab)
 
     return climb, idf_lookup
+
+
+def combine_matrix(cmb, route_description_weight = 1.618):
+    """ Add sparse representations of route and area descriptions together """
+    
+    if pd.isnull(cmb['parent_sparse_tfidf']):
+        return cmb['sparse_tfidf']
+    else:
+        area = np.array(cmb['parent_sparse_tfidf'].todense())
+        route = np.array(cmb['sparse_tfidf'].todense()) * route_description_weight
+        added = area + route
+        # L2 normalize again
+        text_vector = added / norm(added, 2)
+        return csr_matrix(text_vector)
