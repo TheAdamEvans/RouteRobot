@@ -72,7 +72,10 @@ def combine_matrix(cmb, route_description_weight = 1.618):
     """ Add sparse representations of route and area descriptions together """
     
     if pd.isnull(cmb['parent_sparse_tfidf']):
-        return cmb['sparse_tfidf']
+        if pd.isnull(cmb['sparse_tfidf']):
+            return float('NaN')
+        else:
+            return cmb['sparse_tfidf']
     else:
         area = np.array(cmb['parent_sparse_tfidf'].todense())
         route = np.array(cmb['sparse_tfidf'].todense()) * route_description_weight

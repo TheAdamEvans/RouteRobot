@@ -1,13 +1,15 @@
 drop table if exists climb;
 create table climb (
-    'origin_id' integer not null,
+    'origin_href' integer not null,
     'href' integer not null,
     'name' text not null,
+    'type' text null,
     'rateYDS' text null,
+    'rateHueco' text null,
     'feet' integer null,
-    'description' real null,
-    'grade' real null,
-    'staraverage' real null,
+    'keyword' text null,
     'best' integer null,
-    'keyword' text null
+    'img_src' text null,
+    'img_height' text null,
+    'img_width' text null
 );

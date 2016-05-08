@@ -111,10 +111,11 @@ def cast_all_pickles(DATA_DIR):
         if col in climb.columns:
             climb[col] = pd.notnull(climb[col])
 
-    climb['single_climb_type'] = climb.apply(get_climb_type, axis=1, args=(bool_col,))
-
     # Flask doesn't like 'name' as a header
     climb['dest_name'] = climb['name']
+
+    # pick one type descriptor
+    climb['single_climb_type'] = climb.apply(get_climb_type, axis=1, args=(bool_col,))
 
     # scale columns on [0,1] to make scoring easier later
     climb['scaledFeet'] = scale01(climb['feet'])

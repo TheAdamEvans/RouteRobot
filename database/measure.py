@@ -65,12 +65,10 @@ def create_scorer(col, feature):
         return casted, scaled, scorer
     
     elif col in ['description']:
-
-        # feature = feature.replace(np.nan,' ', regex=True)
         
         # lemmatize, tokenize, vectorize text
         tfidf = TfidfVectorizer(
-            min_df=0.01, max_df=0.1, stop_words = 'english',
+            min_df = 0.01, max_df=0.2, stop_words = 'english',
             strip_accents = 'unicode', lowercase=True, ngram_range=(1,2),
             norm='l2', sublinear_tf=True
             )
@@ -84,8 +82,8 @@ def create_scorer(col, feature):
         scaled = pd.DataFrame(scaled, index=feature.index)
 
         def scorer(scaled, ideal):
-            sim = cosine_similarity(ideal, scaled)
-            print sim.shape
+            # sklearn wants you to .reshape
+            sim = cosine_similarity(ideal.reshape(1,-1), scaled)
             sim_score = pd.Series(sim[0], index=feature.index)
             return sim_score.tolist()
         
@@ -123,7 +121,7 @@ def give_recommendation(FIT, href, top):
             # only for description text scoring
             score = scorer(scaled, ideal)
         
-        score = pd.DataFrame({ col: score }, index = scaled.index)
+        score = pd.DataFrame({ col: score }, index=scaled.index)
         score_collect.append(score)
     # concatenate scores into a DataFrame
     rec = pd.concat(score_collect, axis=1)
@@ -139,10 +137,12 @@ def give_recommendation(FIT, href, top):
     rec['boulder'] = rec['boulder'] * 2
     rec['sport'] = rec['sport'] * 2
     rec['trad'] = rec['trad'] * 2
-    rec['ice'] = rec['ice'] * 4
+    # rec['ice'] = rec['ice'] * 4
     
     rec['best'] = rec.sum(axis=1)
     rec.sort_values('best', ascending=False, inplace=True)
+    # format for web
+    rec['best'] = (100 * rec['best'] / max(rec['best'])).round()
 
     # top recommendation is always self
-    return rec[1:top+1]
+    return rec[0:top+1]
