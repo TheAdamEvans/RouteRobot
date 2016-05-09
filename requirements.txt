@@ -3,5 +3,3 @@ pandas==0.18.1
 scikit-learn==0.17.1
 scipy==0.15.1
 statsmodels==0.6.1
-jupyter==4.1.0
-
