@@ -16,20 +16,6 @@ def get_parent_datum(climb, col, depth=2):
     return pd.Series(collect, index=climb.index)
 
 
-def recurse_datum(hierarchy, datum, climb):
-    """ Recursively seeks a non null column value from the hierarchy """
-    coord = climb.loc[hierarchy[-1]][datum]
-    if isinstance(coord,(str,list,int)):
-        return coord
-    else:
-        hierarchy = hierarchy[:-1]
-        if len(hierarchy) == 0:
-            return float('NaN')
-        else:
-            coord = recurse_datum(hierarchy, datum, climb)
-            return coord
-
-
 def collapse_hierarchy(climb):
     """ Leverage then delete hierarchy, children_href """
 
@@ -47,8 +33,9 @@ def collapse_hierarchy(climb):
     climb['parent_tokens'] = get_parent_datum(climb, 'tokens')
     climb['parent_keyword'] = map(lambda t: get_keyword(t), climb['parent_tokens'])
     
-    # parent vector could be useful for recommendations
+    # parent vector is useful for recommendations
     climb['parent_sparse_tfidf'] = get_parent_datum(climb, 'sparse_tfidf')
+    climb['parent_dense_tfidf'] = get_parent_datum(climb, 'dense_tfidf')
     
     # TODO collapse children
     # sum of starvotes, average staraverage, etc.
