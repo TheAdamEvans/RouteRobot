@@ -5,7 +5,7 @@ import pandas as pd
 from save_better import cast_all_pickles
 
 ROOT_HREF = ''
-DATA_DIR = './test_data/'
+DATA_DIR = './data/'
 
 
 if __name__ == '__main__':

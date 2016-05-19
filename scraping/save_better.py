@@ -4,7 +4,6 @@ import pandas as pd
 
 from destination import Destination
 from grade_cleaner import convert_string_grade
-from collapse import recurse_datum
 
 from statsmodels.distributions.empirical_distribution import ECDF
 
@@ -82,6 +81,21 @@ def combine_pickle(DATA_DIR):
 
     return climb
 
+
+def recurse_datum(hierarchy, datum, climb):
+    """ Recursively seeks a non null column value from the hierarchy """
+    coord = climb.loc[hierarchy[-1]][datum]
+    if isinstance(coord,(str,list,int)):
+        return coord
+    else:
+        hierarchy = hierarchy[:-1]
+        if len(hierarchy) == 0:
+            return float('NaN')
+        else:
+            coord = recurse_datum(hierarchy, datum, climb)
+            return coord
+
+
 def cast_all_pickles(DATA_DIR):
     """ From directory of pickles return workable DataFrame """
 
@@ -105,7 +119,7 @@ def cast_all_pickles(DATA_DIR):
         if col in climb.columns:
             climb[col] = pd.to_numeric(climb[col], errors='coerce')
     bool_col = [
-        'mixed','ice','tr','boulder','aid','alpine','trad','sport','chipped'
+        'mixed','ice','aid','tr','alpine','trad','sport','chipped','boulder'
         ]
     for col in bool_col:
         if col in climb.columns:
